@@ -1,7 +1,7 @@
 name: "Validate"
 
 on:
-#  workflow_dispatch:
+  workflow_dispatch:
 #  schedule:
 #    - cron:  "0 0 * * *"
 #  push:
@@ -9,7 +9,7 @@ on:
 #      - "main"
   pull_request:
     branches:
-      - "never"
+      - "main"
 
 jobs:
   hassfest: # https://developers.home-assistant.io/blog/2020/04/16/hassfest
