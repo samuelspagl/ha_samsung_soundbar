@@ -1,0 +1,16 @@
+{
+    "config":{
+        "step":{
+            "user":{
+                "data": {
+                    "api_key": "SmartThings API Token",
+                    "device_id": "Device ID",
+                    "device_name":"Device Name",
+                    "device_volume": "Max Volume (int)"
+                  },
+                  "description": "Bitte gib deine Daten ein.",
+                  "title": "Authentifizierung"
+            }
+        }
+    }
+}

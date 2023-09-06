@@ -1,0 +1,27 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download repo
+        uses: actions/checkout@v1
+
+      - name: Zip samsung_soundbar dir
+        run: |
+          cd /home/runner/work/ha_samsung_soundbar/ha_samsung_soundbar/custom_components/samsung_soundbar
+          zip samsung_soundbar.zip -r ./
+
+      - name: Upload zip to release
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: /home/runner/work/ha_samsung_soundbar/ha_samsung_soundbar/custom_components/samsung_soundbar/samsung_soundbar.zip
+          asset_name: samsung_soundbar.zip
+          tag: ${{ github.ref }}
+          overwrite: true
