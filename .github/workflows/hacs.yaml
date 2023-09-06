@@ -1,29 +1,16 @@
-name: Validate HACS
+name: HACS Action
+
 on:
   push:
   pull_request:
+  schedule:
+    - cron: "0 0 * * *"
 jobs:
-  ci:
-    runs-on: ubuntu-latest
+  hacs:
+    name: HACS Action
+    runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v2
-        name: Download repo
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-python@v2
-        name: Setup Python
-        with:
-          python-version: '3.8.x'
-
-      - uses: actions/cache@v2
-        name: Cache
-        with:
-          path: |
-            ~/.cache/pip
-          key: custom-component-ci
-
       - name: HACS Action
-        uses: hacs/action@main
+        uses: "hacs/action@main"
         with:
-          CATEGORY: integration
+          category: "integration"
