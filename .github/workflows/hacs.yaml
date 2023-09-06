@@ -9,7 +9,7 @@ on:
 #      - "main"
   pull_request:
     branches:
-      - "never"
+      - "main"
 
 jobs:
   hassfest: # https://developers.home-assistant.io/blog/2020/04/16/hassfest
