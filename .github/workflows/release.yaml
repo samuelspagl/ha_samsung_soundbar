@@ -1,27 +1,35 @@
-name: Release
+name: "Release"
 
 on:
   release:
-    types: [published]
+    types:
+      - "published"
+
+permissions: {}
 
 jobs:
   release:
-    name: Prepare release
-    runs-on: ubuntu-latest
+    name: "Release"
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
     steps:
-      - name: Download repo
-        uses: actions/checkout@v3
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v3.5.3"
 
-      - name: Zip samsung_soundbar dir
+      - name: "Adjust version number"
+        shell: "bash"
         run: |
-          cd /home/runner/work/ha_samsung_soundbar/ha_samsung_soundbar/custom_components/samsung_soundbar
+          yq -i -o json '.version="${{ github.event.release.tag_name }}"' \
+            "${{ github.workspace }}/custom_components/samsung_soundbar/manifest.json"
+
+      - name: "ZIP the integration directory"
+        shell: "bash"
+        run: |
+          cd "${{ github.workspace }}/custom_components/samsung_soundbar"
           zip samsung_soundbar.zip -r ./
 
-      - name: Upload zip to release
-        uses: svenstaro/upload-release-action@v1-release
+      - name: "Upload the ZIP file to the release"
+        uses: softprops/action-gh-release@v0.1.15
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: /home/runner/work/ha_samsung_soundbar/ha_samsung_soundbar/custom_components/samsung_soundbar/samsung_soundbar.zip
-          asset_name: samsung_soundbar.zip
-          tag: ${{ github.ref }}
-          overwrite: true
+          files: ${{ github.workspace }}/custom_components/samsung_soundbar/samsung_soundbar.zip
