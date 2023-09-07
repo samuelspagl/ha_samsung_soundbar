@@ -19,39 +19,27 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         device = device_config.device
         if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
             entities.append(
-                SoundbarNumberEntity(
+                SoundbarWooferNumberEntity(
                     device,
                     "woofer_level",
-                    lambda: device.woofer_level,
-                    device.set_woofer,
-                    (-6, 12),
-                    unit="dB",
-                    mode=NumberMode.BOX
                 )
             )
     async_add_entities(entities)
     return True
 
 
-class SoundbarNumberEntity(NumberEntity):
+class SoundbarWooferNumberEntity(NumberEntity):
     def __init__(
         self,
         device: SoundbarDevice,
         append_unique_id: str,
-        state_function,
-        on_function,
-        min_max: tuple,
-        *,
-        unit: str = "%",
-        step_size: float = 1,
-        mode: NumberMode = NumberMode.SLIDER
     ):
         self.entity_id = f"number.{device.device_name}_{append_unique_id}"
-        self.entity_description = NumberEntityDescription(native_max_value=min_max[1],
-                                                          native_min_value=min_max[0],
-                                                          mode=mode,
-                                                          native_step=step_size,
-                                                          native_unit_of_measurement=unit,
+        self.entity_description = NumberEntityDescription(native_max_value=6,
+                                                          native_min_value=-10,
+                                                          mode=NumberMode.BOX,
+                                                          native_step=1,
+                                                          native_unit_of_measurement="dB",
                                                           key=append_unique_id,
                                                           )
         self.__device = device
@@ -65,11 +53,6 @@ class SoundbarNumberEntity(NumberEntity):
         )
         self.__append_unique_id = append_unique_id
 
-        self.__current_value_function = state_function
-        self.__set_value_function = on_function
-        self.__min_value = min_max[0]
-        self.__max_value = min_max[1]
-
     # ---------- GENERAL ---------------
 
     @property
@@ -80,8 +63,7 @@ class SoundbarNumberEntity(NumberEntity):
 
     @property
     def native_value(self) -> float | None:
-        _LOGGER.info(f"[{DOMAIN}] Soundbar Woofer number value {self.__current_value_function()}")
-        return self.__current_value_function()
+        return self.__device.woofer_level
 
     async def async_set_native_value(self, value: float):
-        await self.__set_value_function(value)
+        await self.__device.set_woofer(int(value))
