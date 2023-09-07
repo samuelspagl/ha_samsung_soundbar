@@ -1,6 +1,6 @@
 import logging
 
-from homeassistant.components.number import NumberEntity
+from homeassistant.components.number import NumberEntity, NumberEntityDescription, NumberMode
 from homeassistant.helpers.entity import DeviceInfo
 
 from .models import DeviceConfig
@@ -22,9 +22,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 SoundbarNumberEntity(
                     device,
                     "woofer_level",
-                    device.woofer_level,
+                    lambda: device.woofer_level,
                     device.set_woofer,
                     (-6, 12),
+                    unit="dB",
+                    mode=NumberMode.BOX
                 )
             )
     async_add_entities(entities)
@@ -39,9 +41,19 @@ class SoundbarNumberEntity(NumberEntity):
         state_function,
         on_function,
         min_max: tuple,
+        *,
+        unit: str = "%",
+        step_size: float = 1,
+        mode: NumberMode = NumberMode.SLIDER
     ):
         self.entity_id = f"number.{device.device_name}_{append_unique_id}"
-
+        self.entity_description = NumberEntityDescription(native_max_value=min_max[1],
+                                                          native_min_value=min_max[0],
+                                                          mode=mode,
+                                                          native_step=step_size,
+                                                          native_unit_of_measurement=unit,
+                                                          key=append_unique_id,
+                                                          )
         self.__device = device
         self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
         self._attr_device_info = DeviceInfo(
@@ -51,6 +63,7 @@ class SoundbarNumberEntity(NumberEntity):
             model=self.__device.model,
             sw_version=self.__device.firmware_version,
         )
+        self.__append_unique_id = append_unique_id
 
         self.__current_value_function = state_function
         self.__set_value_function = on_function
@@ -61,17 +74,14 @@ class SoundbarNumberEntity(NumberEntity):
 
     @property
     def name(self):
-        return self.__device.device_name
+        return self.__append_unique_id
 
     # ------ STATE FUNCTIONS --------
 
     @property
     def native_value(self) -> float | None:
-        return self.__current_value_function
+        _LOGGER.info(f"[{DOMAIN}] Soundbar Woofer number value {self.__current_value_function()}")
+        return self.__current_value_function()
 
     async def async_set_native_value(self, value: float):
-        if value > self.__max_value:
-            value = self.__min_value
-        if value < self.__min_value:
-            value = self.__min_value
         await self.__set_value_function(value)

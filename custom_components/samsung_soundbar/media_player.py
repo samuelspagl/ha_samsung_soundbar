@@ -1,4 +1,5 @@
 import logging
+from typing import Mapping, Any
 
 from homeassistant.components.media_player import (
     DEVICE_CLASS_SPEAKER,
@@ -189,3 +190,7 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_media_stop(self):
         await self.device.media_stop()
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
+        return self.device.retrieve_data
