@@ -40,8 +40,9 @@ are not documented... ;)
   - bass level
   - *[to come] equalizer bands*
 - `select` entity
-  - *[to come] sound mode* (additional control in the "Device" tab)
-  - *[to come] equalizer preset*
+  - sound mode (additional control in the "Device" tab)
+  - input (additional control in the "Device" tab)
+  - equalizer preset
 
 ## How to install it:
 

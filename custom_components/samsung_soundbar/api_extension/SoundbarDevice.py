@@ -1,9 +1,13 @@
+import asyncio
+import datetime
 import json
 import time
 from urllib.parse import quote
-
+import logging
 from pysmartthings import DeviceEntity
 
+from ..const import DOMAIN
+log = logging.getLogger(__name__)
 
 class SoundbarDevice:
     def __init__(
@@ -33,6 +37,7 @@ class SoundbarDevice:
         self.__media_title = ""
         self.__media_artist = ""
         self.__media_cover_url = ""
+        self.__media_cover_url_update_time: datetime.datetime | None = None
         self.__old_media_title = ""
 
         self.__max_volume = max_volume
@@ -55,13 +60,24 @@ class SoundbarDevice:
         ]
         if self.__media_title != self.__old_media_title:
             self.__old_media_title = self.__media_title
+            self.__media_cover_url_update_time = datetime.datetime.now()
             self.__media_cover_url = await self.get_song_title_artwork(
                 self.__media_artist, self.__media_title
             )
 
     async def _update_soundmode(self):
         await self.update_execution_data(["/sec/networkaudio/soundmode"])
+        await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
+        retry = 0
+        while("x.com.samsung.networkaudio.supportedSoundmode" not in payload and retry < 10):
+            await asyncio.sleep(0.2)
+            payload = await self.get_execute_status()
+            retry += 1
+        if retry == 10:
+            log.error(f"[{DOMAIN}] Error: _update_soundmode exceeded a retry counter of 10")
+            return
+
         self.__supported_soundmodes = payload[
             "x.com.samsung.networkaudio.supportedSoundmode"
         ]
@@ -69,13 +85,31 @@ class SoundbarDevice:
 
     async def _update_woofer(self):
         await self.update_execution_data(["/sec/networkaudio/woofer"])
+        await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
+        retry = 0
+        while("x.com.samsung.networkaudio.woofer" not in payload and retry < 10):
+            await asyncio.sleep(0.2)
+            payload = await self.get_execute_status()
+            retry += 1
+        if retry == 10:
+            log.error(f"[{DOMAIN}] Error: _update_woofer exceeded a retry counter of 10")
+            return
         self.__woofer_level = payload["x.com.samsung.networkaudio.woofer"]
         self.__woofer_connection = payload["x.com.samsung.networkaudio.connection"]
 
     async def _update_equalizer(self):
         await self.update_execution_data(["/sec/networkaudio/eq"])
+        await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
+        retry = 0
+        while("x.com.samsung.networkaudio.EQname" not in payload and retry < 10):
+            await asyncio.sleep(0.2)
+            payload = await self.get_execute_status()
+            retry += 1
+        if retry == 10:
+            log.error(f"[{DOMAIN}] Error: _update_equalizer exceeded a retry counter of 10")
+            return
         self.__active_eq_preset = payload["x.com.samsung.networkaudio.EQname"]
         self.__supported_eq_presets = payload[
             "x.com.samsung.networkaudio.supportedList"
@@ -85,7 +119,18 @@ class SoundbarDevice:
 
     async def _update_advanced_audio(self):
         await self.update_execution_data(["/sec/networkaudio/advancedaudio"])
+        await asyncio.sleep(0.1)
+
         payload = await self.get_execute_status()
+        retry = 0
+        while("x.com.samsung.networkaudio.nightmode" not in payload and retry < 10):
+            await asyncio.sleep(0.2)
+            payload = await self.get_execute_status()
+            retry += 1
+        if retry == 10:
+            log.error(f"[{DOMAIN}] Error: _update_advanced_audio exceeded a retry counter of 10")
+            return
+
         self.__night_mode = payload["x.com.samsung.networkaudio.nightmode"]
         self.__bass_mode = payload["x.com.samsung.networkaudio.bassboost"]
         self.__voice_amplifier = payload["x.com.samsung.networkaudio.voiceamplifier"]
@@ -132,7 +177,10 @@ class SoundbarDevice:
 
     @property
     def volume_level(self) -> float:
-        return ((self.device.status.volume / 100) * self.__max_volume) / 100
+        vol = self.device.status.volume
+        if vol > self.__max_volume:
+            return 1.0
+        return self.device.status.volume / self.__max_volume
 
     @property
     def volume_muted(self) -> bool:
@@ -144,7 +192,7 @@ class SoundbarDevice:
         This respects the max volume and hovers between
         :param volume: between 0 and 1
         """
-        await self.device.set_volume(int(volume * self.__max_volume))
+        await self.device.set_volume(int(volume * self.__max_volume), True)
 
     async def mute_volume(self, mute: bool):
         if mute:
@@ -174,6 +222,7 @@ class SoundbarDevice:
             property="x.com.samsung.networkaudio.woofer",
             value=level,
         )
+        self.__woofer_level = level
 
     # ------------ INPUT SOURCE -------------
 
@@ -303,6 +352,10 @@ class SoundbarDevice:
         if detail_status is not None:
             return detail_status.value
         return None
+
+    @property
+    def media_coverart_updated(self) -> datetime.datetime:
+        return self.__media_cover_url_update_time
 
     # ------------ SUPPORT FUNCTIONS ------------
 

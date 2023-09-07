@@ -1,8 +1,10 @@
 import logging
+from datetime import datetime
 
 from homeassistant.components.image import ImageEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.typing import UndefinedType
 
 from .models import DeviceConfig
 from .api_extension.SoundbarDevice import SoundbarDevice
@@ -41,9 +43,22 @@ class SoundbarImageEntity(ImageEntity):
             sw_version=self.__device.firmware_version,
         )
 
-        self._attr_image_url = self.__device.media_coverart_url
+        self.__updated = None
 
     # ---------- GENERAL ---------------
+    @property
+    def image_url(self) -> str | None | UndefinedType:
+        """Return URL of image."""
+        return self.__device.media_coverart_url
+
+    @property
+    def image_last_updated(self) -> datetime | None:
+        """The time when the image was last updated."""
+        current = self.__device.media_coverart_updated
+        if self.__updated != current:
+            self._cached_image = None
+            self.__updated = current
+        return current
 
     @property
     def name(self):
