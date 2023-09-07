@@ -1,0 +1,6 @@
+name: "GitHub Pages"
+
+on:
+  pull_request:
+    branches:
+      - "main"
