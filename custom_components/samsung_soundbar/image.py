@@ -6,9 +6,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.typing import UndefinedType
 
-from .models import DeviceConfig
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import DOMAIN, CONF_ENTRY_DEVICE_ID
+from .const import CONF_ENTRY_DEVICE_ID, DOMAIN
+from .models import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
 

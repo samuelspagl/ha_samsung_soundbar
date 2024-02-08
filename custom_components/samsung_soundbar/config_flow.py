@@ -6,13 +6,8 @@ from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pysmartthings import APIResponseError
 
-from .const import (
-    CONF_ENTRY_API_KEY,
-    CONF_ENTRY_DEVICE_ID,
-    CONF_ENTRY_DEVICE_NAME,
-    CONF_ENTRY_MAX_VOLUME,
-    DOMAIN,
-)
+from .const import (CONF_ENTRY_API_KEY, CONF_ENTRY_DEVICE_ID,
+                    CONF_ENTRY_DEVICE_NAME, CONF_ENTRY_MAX_VOLUME, DOMAIN)
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -1,13 +1,15 @@
 import logging
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
-
-from .models import DeviceConfig
-from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import CONF_ENTRY_DEVICE_ID, DOMAIN
+from homeassistant.components.sensor import (SensorDeviceClass, SensorEntity,
+                                             SensorStateClass)
 from homeassistant.helpers.entity import DeviceInfo
 
+from .api_extension.SoundbarDevice import SoundbarDevice
+from .const import CONF_ENTRY_DEVICE_ID, DOMAIN
+from .models import DeviceConfig
+
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     domain_data = hass.data[DOMAIN]
@@ -17,12 +19,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         device = device_config.device
 
         if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            entities.append(
-                VolumeSensor(device, "volume_level")
-            )
+            entities.append(VolumeSensor(device, "volume_level"))
     async_add_entities(entities)
     return True
-
 
 
 class VolumeSensor(SensorEntity):

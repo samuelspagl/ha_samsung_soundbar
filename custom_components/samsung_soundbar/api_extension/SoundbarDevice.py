@@ -1,13 +1,16 @@
 import asyncio
 import datetime
 import json
+import logging
 import time
 from urllib.parse import quote
-import logging
+
 from pysmartthings import DeviceEntity
 
 from ..const import DOMAIN
+
 log = logging.getLogger(__name__)
+
 
 class SoundbarDevice:
     def __init__(
@@ -70,12 +73,17 @@ class SoundbarDevice:
         await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
         retry = 0
-        while("x.com.samsung.networkaudio.supportedSoundmode" not in payload and retry < 10):
+        while (
+            "x.com.samsung.networkaudio.supportedSoundmode" not in payload
+            and retry < 10
+        ):
             await asyncio.sleep(0.2)
             payload = await self.get_execute_status()
             retry += 1
         if retry == 10:
-            log.error(f"[{DOMAIN}] Error: _update_soundmode exceeded a retry counter of 10")
+            log.error(
+                f"[{DOMAIN}] Error: _update_soundmode exceeded a retry counter of 10"
+            )
             return
 
         self.__supported_soundmodes = payload[
@@ -88,12 +96,14 @@ class SoundbarDevice:
         await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
         retry = 0
-        while("x.com.samsung.networkaudio.woofer" not in payload and retry < 10):
+        while "x.com.samsung.networkaudio.woofer" not in payload and retry < 10:
             await asyncio.sleep(0.2)
             payload = await self.get_execute_status()
             retry += 1
         if retry == 10:
-            log.error(f"[{DOMAIN}] Error: _update_woofer exceeded a retry counter of 10")
+            log.error(
+                f"[{DOMAIN}] Error: _update_woofer exceeded a retry counter of 10"
+            )
             return
         self.__woofer_level = payload["x.com.samsung.networkaudio.woofer"]
         self.__woofer_connection = payload["x.com.samsung.networkaudio.connection"]
@@ -103,12 +113,14 @@ class SoundbarDevice:
         await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
         retry = 0
-        while("x.com.samsung.networkaudio.EQname" not in payload and retry < 10):
+        while "x.com.samsung.networkaudio.EQname" not in payload and retry < 10:
             await asyncio.sleep(0.2)
             payload = await self.get_execute_status()
             retry += 1
         if retry == 10:
-            log.error(f"[{DOMAIN}] Error: _update_equalizer exceeded a retry counter of 10")
+            log.error(
+                f"[{DOMAIN}] Error: _update_equalizer exceeded a retry counter of 10"
+            )
             return
         self.__active_eq_preset = payload["x.com.samsung.networkaudio.EQname"]
         self.__supported_eq_presets = payload[
@@ -123,12 +135,14 @@ class SoundbarDevice:
 
         payload = await self.get_execute_status()
         retry = 0
-        while("x.com.samsung.networkaudio.nightmode" not in payload and retry < 10):
+        while "x.com.samsung.networkaudio.nightmode" not in payload and retry < 10:
             await asyncio.sleep(0.2)
             payload = await self.get_execute_status()
             retry += 1
         if retry == 10:
-            log.error(f"[{DOMAIN}] Error: _update_advanced_audio exceeded a retry counter of 10")
+            log.error(
+                f"[{DOMAIN}] Error: _update_advanced_audio exceeded a retry counter of 10"
+            )
             return
 
         self.__night_mode = payload["x.com.samsung.networkaudio.nightmode"]
