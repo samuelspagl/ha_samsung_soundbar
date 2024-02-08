@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.1] Chore: Format repository - 2024-02-08
+
+### Changed
+
+- formatted the repository with black and isort
+
 ## [0.2.0] Add volume sensor - 2024-02-08
 
 ### Added
