@@ -25,6 +25,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     lambda: device.night_mode,
                     device.set_night_mode,
                     device.set_night_mode,
+                    "mdi:weather-night",
                 )
             )
             entities.append(
@@ -34,6 +35,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     lambda: device.bass_mode,
                     device.set_bass_mode,
                     device.set_bass_mode,
+                    "mdi:speaker-wireless",
                 )
             )
             entities.append(
@@ -43,6 +45,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     lambda: device.voice_amplifier,
                     device.set_voice_amplifier,
                     device.set_voice_amplifier,
+                    "mdi:account-voice",
                 )
             )
     async_add_entities(entities)
@@ -57,12 +60,14 @@ class SoundbarSwitchAdvancedAudio(SwitchEntity):
         state_function,
         on_function,
         off_function,
+        icon_string: str = "mdi:toggle-switch-variant",
     ):
         self.entity_id = f"switch.{device.device_name}_{append_unique_id}"
 
         self.__device = device
         self._name = f"{self.__device.device_name} {append_unique_id}"
         self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
+        self.__base_icon = icon_string
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self.__device.device_id)},
             name=self.__device.device_name,
@@ -84,6 +89,10 @@ class SoundbarSwitchAdvancedAudio(SwitchEntity):
 
     def update(self):
         self.__state = self.__state_function()
+
+    @property
+    def icon(self) -> str | None:
+        return self.__base_icon
 
     # ------ STATE FUNCTIONS --------
     @property
