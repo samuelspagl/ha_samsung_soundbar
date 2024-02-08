@@ -1,18 +1,33 @@
 import logging
 from typing import Any, Mapping
 
-from homeassistant.components.media_player import (DEVICE_CLASS_SPEAKER,
-                                                   MediaPlayerEntity)
+from homeassistant.components.media_player import (
+    DEVICE_CLASS_SPEAKER,
+    MediaPlayerEntity,
+)
 from homeassistant.components.media_player.const import (
-    SUPPORT_PAUSE, SUPPORT_PLAY, SUPPORT_SELECT_SOUND_MODE,
-    SUPPORT_SELECT_SOURCE, SUPPORT_STOP, SUPPORT_TURN_OFF, SUPPORT_TURN_ON,
-    SUPPORT_VOLUME_MUTE, SUPPORT_VOLUME_SET, SUPPORT_VOLUME_STEP)
+    SUPPORT_PAUSE,
+    SUPPORT_PLAY,
+    SUPPORT_SELECT_SOUND_MODE,
+    SUPPORT_SELECT_SOURCE,
+    SUPPORT_STOP,
+    SUPPORT_TURN_OFF,
+    SUPPORT_TURN_ON,
+    SUPPORT_VOLUME_MUTE,
+    SUPPORT_VOLUME_SET,
+    SUPPORT_VOLUME_STEP,
+)
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import (CONF_ENTRY_API_KEY, CONF_ENTRY_DEVICE_ID,
-                    CONF_ENTRY_DEVICE_NAME, CONF_ENTRY_MAX_VOLUME, DOMAIN)
+from .const import (
+    CONF_ENTRY_API_KEY,
+    CONF_ENTRY_DEVICE_ID,
+    CONF_ENTRY_DEVICE_NAME,
+    CONF_ENTRY_MAX_VOLUME,
+    DOMAIN,
+)
 from .models import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
@@ -176,6 +191,8 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
     async def async_media_stop(self):
         await self.device.media_stop()
 
-    @property
-    def extra_state_attributes(self) -> Mapping[str, Any] | None:
-        return {"device_information": self.device.retrieve_data}
+    # This property can be uncommented for some extra_attributes
+    # Still enabling this can cause side-effects.
+    # @property
+    # def extra_state_attributes(self) -> Mapping[str, Any] | None:
+    #     return {"device_information": self.device.retrieve_data}
