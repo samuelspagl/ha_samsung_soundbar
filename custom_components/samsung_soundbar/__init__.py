@@ -6,19 +6,14 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pysmartthings import SmartThings
 
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import (
-    CONF_ENTRY_API_KEY,
-    CONF_ENTRY_DEVICE_ID,
-    CONF_ENTRY_DEVICE_NAME,
-    CONF_ENTRY_MAX_VOLUME,
-    SUPPORTED_DOMAINS,
-    DOMAIN,
-)
+from .const import (CONF_ENTRY_API_KEY, CONF_ENTRY_DEVICE_ID,
+                    CONF_ENTRY_DEVICE_NAME, CONF_ENTRY_MAX_VOLUME, DOMAIN,
+                    SUPPORTED_DOMAINS)
 from .models import DeviceConfig, SoundbarConfig
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["media_player", "switch", "image", "number", "select"]
+PLATFORMS = ["media_player", "switch", "image", "number", "select", "sensor"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -47,15 +42,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         session = async_get_clientsession(hass)
         soundbar_device = SoundbarDevice(
-                smart_things_device,
-                session,
-                entry.data.get(CONF_ENTRY_MAX_VOLUME),
-                entry.data.get(CONF_ENTRY_DEVICE_NAME),
-            )
+            smart_things_device,
+            session,
+            entry.data.get(CONF_ENTRY_MAX_VOLUME),
+            entry.data.get(CONF_ENTRY_DEVICE_NAME),
+        )
         await soundbar_device.update()
         domain_config.devices[entry.data.get(CONF_ENTRY_DEVICE_ID)] = DeviceConfig(
-            entry.data,
-            soundbar_device
+            entry.data, soundbar_device
         )
         _LOGGER.info(f"[{DOMAIN}] after initializing Soundbar device")
 

@@ -1,5 +1,5 @@
 import logging
-from typing import Mapping, Any
+from typing import Any, Mapping
 
 from homeassistant.components.media_player import (
     DEVICE_CLASS_SPEAKER,
@@ -20,7 +20,6 @@ from homeassistant.components.media_player.const import (
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 
-from .models import DeviceConfig
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .const import (
     CONF_ENTRY_API_KEY,
@@ -29,6 +28,7 @@ from .const import (
     CONF_ENTRY_MAX_VOLUME,
     DOMAIN,
 )
+from .models import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -191,6 +191,8 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
     async def async_media_stop(self):
         await self.device.media_stop()
 
-    @property
-    def extra_state_attributes(self) -> Mapping[str, Any] | None:
-        return self.device.retrieve_data
+    # This property can be uncommented for some extra_attributes
+    # Still enabling this can cause side-effects.
+    # @property
+    # def extra_state_attributes(self) -> Mapping[str, Any] | None:
+    #     return {"device_information": self.device.retrieve_data}
