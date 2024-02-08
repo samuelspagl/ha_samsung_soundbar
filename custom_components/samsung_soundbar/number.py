@@ -1,11 +1,13 @@
 import logging
 
-from homeassistant.components.number import NumberEntity, NumberEntityDescription, NumberMode
+from homeassistant.components.number import (NumberEntity,
+                                             NumberEntityDescription,
+                                             NumberMode)
 from homeassistant.helpers.entity import DeviceInfo
 
-from .models import DeviceConfig
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .const import CONF_ENTRY_DEVICE_ID, DOMAIN
+from .models import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,13 +37,14 @@ class SoundbarWooferNumberEntity(NumberEntity):
         append_unique_id: str,
     ):
         self.entity_id = f"number.{device.device_name}_{append_unique_id}"
-        self.entity_description = NumberEntityDescription(native_max_value=6,
-                                                          native_min_value=-10,
-                                                          mode=NumberMode.BOX,
-                                                          native_step=1,
-                                                          native_unit_of_measurement="dB",
-                                                          key=append_unique_id,
-                                                          )
+        self.entity_description = NumberEntityDescription(
+            native_max_value=6,
+            native_min_value=-10,
+            mode=NumberMode.BOX,
+            native_step=1,
+            native_unit_of_measurement="dB",
+            key=append_unique_id,
+        )
         self.__device = device
         self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
         self._attr_device_info = DeviceInfo(

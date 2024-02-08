@@ -3,9 +3,9 @@ import logging
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.entity import DeviceInfo
 
-from .models import DeviceConfig
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .const import CONF_ENTRY_DEVICE_ID, DOMAIN
+from .models import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
 
