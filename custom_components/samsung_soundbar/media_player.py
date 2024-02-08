@@ -3,7 +3,8 @@ from typing import Any, Mapping
 
 from homeassistant.components.media_player import (DEVICE_CLASS_SPEAKER,
                                                    MediaPlayerEntity)
-from homeassistant.components.media_player.const import MediaPlayerEntityFeature
+from homeassistant.components.media_player.const import \
+    MediaPlayerEntityFeature
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 
