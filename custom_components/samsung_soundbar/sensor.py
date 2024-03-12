@@ -19,16 +19,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         device = device_config.device
 
         if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            entities.append(VolumeSensor(device, "volume_level"))
+            entities.append(VolumeSensor(device, "volume_level", "mdi:volume-high"))
     async_add_entities(entities)
     return True
 
 
 class VolumeSensor(SensorEntity):
-    def __init__(self, device: SoundbarDevice, append_unique_id: str):
+    def __init__(self, device: SoundbarDevice, append_unique_id: str, icon_string: str):
         self.entity_id = f"sensor.{device.device_name}_{append_unique_id}"
         self.__device = device
         self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
+        self.__base_icon = icon_string
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self.__device.device_id)},
             name=self.__device.device_name,
@@ -39,6 +40,10 @@ class VolumeSensor(SensorEntity):
         self.__append_unique_id = append_unique_id
 
         _attr_device_class = SensorDeviceClass.VOLUME
+
+    @property
+    def icon(self) -> str | None:
+        return self.__base_icon
 
     def update(self) -> None:
         """Fetch new state data for the sensor.

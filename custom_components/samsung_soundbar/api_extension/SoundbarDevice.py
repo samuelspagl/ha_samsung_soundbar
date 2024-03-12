@@ -242,6 +242,8 @@ class SoundbarDevice:
 
     @property
     def input_source(self):
+        if self.media_app_name in ("AirPlay", "Spotify"):
+            return "wifi"
         return self.device.status.input_source
 
     @property

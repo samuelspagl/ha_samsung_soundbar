@@ -22,22 +22,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         device = device_config.device
         if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
             entities.append(
-                EqPresetSelectEntity(
-                    device,
-                    "eq_preset",
-                )
+                EqPresetSelectEntity(device, "eq_preset", "mdi:tune-vertical")
             )
             entities.append(
-                SoundModeSelectEntity(
-                    device,
-                    "sound_mode_preset",
-                )
+                SoundModeSelectEntity(device, "sound_mode_preset", "mdi:surround-sound")
             )
             entities.append(
-                InputSelectEntity(
-                    device,
-                    "input_preset",
-                )
+                InputSelectEntity(device, "input_preset", "mdi:video-input-hdmi")
             )
     async_add_entities(entities)
     return True
@@ -48,11 +39,13 @@ class EqPresetSelectEntity(SelectEntity):
         self,
         device: SoundbarDevice,
         append_unique_id: str,
+        icon_string: str,
     ):
         self.entity_id = f"number.{device.device_name}_{append_unique_id}"
         self.entity_description = SelectEntityDescription(
             key=append_unique_id,
         )
+        self.__base_icon = icon_string
         self.__device = device
         self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
         self._attr_device_info = DeviceInfo(
@@ -72,6 +65,10 @@ class EqPresetSelectEntity(SelectEntity):
     def name(self):
         return self.__append_unique_id
 
+    @property
+    def icon(self) -> str | None:
+        return self.__base_icon
+
     # ------ STATE FUNCTIONS --------
 
     @property
@@ -90,11 +87,13 @@ class SoundModeSelectEntity(SelectEntity):
         self,
         device: SoundbarDevice,
         append_unique_id: str,
+        icon_string: str,
     ):
         self.entity_id = f"number.{device.device_name}_{append_unique_id}"
         self.entity_description = SelectEntityDescription(
             key=append_unique_id,
         )
+        self.__base_icon = icon_string
         self.__device = device
         self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
         self._attr_device_info = DeviceInfo(
@@ -114,6 +113,10 @@ class SoundModeSelectEntity(SelectEntity):
     def name(self):
         return self.__append_unique_id
 
+    @property
+    def icon(self) -> str | None:
+        return self.__base_icon
+
     # ------ STATE FUNCTIONS --------
 
     @property
@@ -132,11 +135,13 @@ class InputSelectEntity(SelectEntity):
         self,
         device: SoundbarDevice,
         append_unique_id: str,
+        icon_string: str,
     ):
         self.entity_id = f"number.{device.device_name}_{append_unique_id}"
         self.entity_description = SelectEntityDescription(
             key=append_unique_id,
         )
+        self.__base_icon = icon_string
         self.__device = device
         self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
         self._attr_device_info = DeviceInfo(
@@ -155,6 +160,10 @@ class InputSelectEntity(SelectEntity):
     @property
     def name(self):
         return self.__append_unique_id
+
+    @property
+    def icon(self) -> str | None:
+        return self.__base_icon
 
     # ------ STATE FUNCTIONS --------
 
