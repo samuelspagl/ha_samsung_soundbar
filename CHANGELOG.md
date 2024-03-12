@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2] Fix division by zero
+
+### Added
+
+- The config flow now also checks whether the `int` provided for `CONF_ENTRY_MAX_VOLUME` is
+  greater than `1` and lower than `100`. This will make sure that a division by zero cannot happen.
+
 ## [0.3.0] Icons and Chore
 
 ### Added
