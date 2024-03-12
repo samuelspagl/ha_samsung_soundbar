@@ -46,7 +46,7 @@ class ExampleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_ENTRY_API_KEY): str,
                     vol.Required(CONF_ENTRY_DEVICE_ID): str,
                     vol.Required(CONF_ENTRY_DEVICE_NAME): str,
-                    vol.Required(CONF_ENTRY_MAX_VOLUME): All(int, Range(min=1, max=100))
+                    vol.Required(CONF_ENTRY_MAX_VOLUME, default=100): All(int, Range(min=1, max=100))
                 }
             ),
         )
