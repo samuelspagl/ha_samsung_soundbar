@@ -1,6 +1,19 @@
-# HomeAssistant: Samsung Soundbar Integration
+# YASSI: Yet Another Samsung Soundbar Integration (for HomeAssistant)
 
-> Yet another Samsung Soundbar Integration (YASSI)
+Welcome to YASSI, the HomeAssistant integration designed to bring comprehensive control over your Samsung Soundbar into your smart home ecosystem.
+
+**Table of Contents:**
+<!-- TOC -->
+* [Why YASSI](#why-yassi)
+* [Features](#features)
+* [Installation / Setup](#installation--setup)
+  * [Prerequisites](#prerequisites)
+  * [Installation:](#installation)
+  * [Configuration](#configuration)
+* [Support](#support)
+* [Contributing](#contributing)
+* [General Thanks](#general-thanks)
+<!-- TOC -->
 
 ## Why YASSI
 
@@ -18,48 +31,55 @@ are not documented... ;)
 
 ## Features
 
-- Set-Up through HomeAssistant-UI
-- Theoretically it should be possible to have multiple Devices (not tested)
 
-- `media_player` Entity
-  - On / Off
-  - Volume
-  - Mute
-  - Input Source
-  - Sound Mode
-  - Media
-    - Play / Pause / Stop
-    - Artist
-    - Title
-    - Music Cover Art url (iTunes Api)
-- `switch` entity
-  - Night mode
-  - Bass mode
-  - Voice amplifier
-- `number` entity
-  - bass level
-  - *[to come] equalizer bands*
-- `select` entity
-  - sound mode (additional control in the "Device" tab)
-  - input (additional control in the "Device" tab)
-  - equalizer preset
+- **UI Setup**: You can easily set up your Soundbar through the UI.
+- **Media Player Controls**: Power, volume, mute, source selection, and media controls are all at your fingertips.
+- **Selectable Sound Modes**: Choose from various sound modes and inputs for optimal audio.
+- **Subwoofer & Equalizer Adjustment**: Fine-tune your audio experience.
+- **Switchable Enhancements**: Toggle features like night mode and voice amplification.
+- **Customizable Bass Level**: Set the bass to your preference.
+- **Multiple Devices**: should be theoretically possible but **not** tested
 
-## How to install it:
+For the full feature list per entity type, please take a look at the [documentation](ha-samsung-soundbar.vercel.app) website.
 
-### HACS: 
->  ⚠️ not done yet but planned (hopefully)
+## Installation / Setup
 
-### Adding this repository as custom repository
+### Prerequisites
 
-Add this repository as custom repository in HACS and install it ;)
+Before you begin, ensure you have the following:
 
-### Manual
+- A Samsung Soundbar compatible with SmartThings.
+- HomeAssistant installed and running.
+- HACS (Home Assistant Community Store) for easy installation.
 
-You can also copy the `samsung_soundbar` folder in the `custom_components` folder to
-your `config/custom_components` folder.
+### Installation
 
+1. Add this repository as a custom repository in HACS or manually copy the `samsung_soundbar` folder to the `custom_components` directory in your HomeAssistant configuration.
+2. Restart HomeAssistant.
+
+> [!NOTE]
+> It is planned to add it to the public `HACS` repository list, but not done yet.
+
+### Configuration
+
+To integrate your Samsung Soundbar with HomeAssistant using YASSI, you'll need the following variables:
+
+- **SmartThings API Key**: [Retrieve your API key from SmartThings Tokens.](https://account.smartthings.com/tokens)
+- **Device ID**: [Find your device ID at SmartThings Devices.](https://my.smartthings.com/advanced/devices)
+- **Device Name**: Choose a name for your soundbar to be recognized in HomeAssistant.
+- **Max Volume**: Define the maximum volume level for the `media_player` slider (between `1` and `100`).
+
+Please use the HomeAssistant UI to setup the integration, providing a yaml configuration in the `configuration.yaml`
+should be possible but is not recommended.
+
+## Support
+
+For support, feature requests, or bug reporting, please visit the Issues section of this GitHub repository.
+
+## Contributing
+
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are greatly appreciated.
 
 ## General Thanks
 
-Like already mentioned, thanks to @PiotrMachowski / @thierryBourbon for the general
-idea on how to do things.
+- Like already mentioned, thanks to @PiotrMachowski / @thierryBourbon for the general idea on how to do things.
