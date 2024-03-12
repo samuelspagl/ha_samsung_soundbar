@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1] Let HomeAssistant schedule failing setup of integration
+
+### Added
+
+- Add a `try / catch` mechanism to the first update of the client while setup and throw a
+  `ConfigEntryNotReady` exception when the update fails
+
 ## [0.3.0] Icons and Chore
 
 ### Added

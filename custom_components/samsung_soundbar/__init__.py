@@ -1,7 +1,9 @@
 import logging
 
+from aiohttp import ClientResponseError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import DOMAIN, HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pysmartthings import SmartThings
 
@@ -49,7 +51,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             entry.data.get(CONF_ENTRY_MAX_VOLUME),
             entry.data.get(CONF_ENTRY_DEVICE_NAME),
         )
-        await soundbar_device.update()
+        try:
+            await soundbar_device.update()
+        except ClientResponseError as excp:
+            raise ConfigEntryNotReady("An error occurred while setting up the soundbar device. "
+                                      "Please recheck whether the device has power or is connected to the internet.")\
+                from excp
         domain_config.devices[entry.data.get(CONF_ENTRY_DEVICE_ID)] = DeviceConfig(
             entry.data, soundbar_device
         )
