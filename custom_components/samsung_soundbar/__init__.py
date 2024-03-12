@@ -20,9 +20,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up component from a config entry, config_entry contains data from config entry database."""
     # store shell object
 
-    _LOGGER.info(f"[{DOMAIN}] Starting to setup ConfigEntry {entry.data}")
+    _LOGGER.info(f"[{DOMAIN}] Starting to setup a ConfigEntry")
+    _LOGGER.debug(f"[{DOMAIN}] Setting up ConfigEntry with the following data: {entry.data}")
     if not DOMAIN in hass.data:
-        _LOGGER.info(f"[{DOMAIN}] Domain not found in hass.data setting default")
+        _LOGGER.debug(f"[{DOMAIN}] Domain not found in hass.data setting default")
         hass.data[DOMAIN] = SoundbarConfig(
             SmartThings(
                 async_get_clientsession(hass), entry.data.get(CONF_ENTRY_API_KEY)
@@ -31,10 +32,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
 
     domain_config: SoundbarConfig = hass.data[DOMAIN]
-    _LOGGER.info(f"[{DOMAIN}] Retrieved Domain Config: {domain_config}")
+    _LOGGER.debug(f"[{DOMAIN}] Retrieved Domain Config: {domain_config}")
 
     if not entry.data.get(CONF_ENTRY_DEVICE_ID) in domain_config.devices:
-        _LOGGER.info(
+        _LOGGER.info(f"[{DOMAIN}] Setting up new Soundbar device")
+        _LOGGER.debug(
             f"[{DOMAIN}] DeviceId: {entry.data.get(CONF_ENTRY_DEVICE_ID)} not found in domain_config, setting up new device."
         )
         smart_things_device = await domain_config.api.device(
@@ -51,7 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         domain_config.devices[entry.data.get(CONF_ENTRY_DEVICE_ID)] = DeviceConfig(
             entry.data, soundbar_device
         )
-        _LOGGER.info(f"[{DOMAIN}] after initializing Soundbar device")
+        _LOGGER.info(f"[{DOMAIN}] Successfully initialized new Soundbar device")
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

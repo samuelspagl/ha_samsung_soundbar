@@ -35,7 +35,7 @@ class ExampleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 return self.async_create_entry(title=DOMAIN, data=user_input)
             except Exception as excp:
-                _LOGGER.error(f"Example Flow triggered an exception {excp}")
+                _LOGGER.error(f"The ConfigFlow triggered an exception {excp}")
                 return self.async_abort(reason="fetch_failed")
 
         return self.async_show_form(
