@@ -1,4 +1,4 @@
-# YASSI: Yet Another Samsung Soundbar Integration (for HomeAssistant)
+# YASSI: Yet Another Samsung Soundbar Integration (for Home Assistant)
 
 Welcome to YASSI, the HomeAssistant integration designed to bring comprehensive control over your Samsung Soundbar into your smart home ecosystem.
 
