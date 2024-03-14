@@ -49,30 +49,27 @@ For the full feature list per entity type, please take a look at the [documentat
 Before you begin, ensure you have the following:
 
 - A Samsung Soundbar compatible with SmartThings.
-- HomeAssistant installed and running.
+- Home Assistant installed and running.
 - HACS (Home Assistant Community Store) for easy installation.
 
 ### Installation
 
-1. Add this repository as a custom repository in HACS or manually copy the `samsung_soundbar` folder to the `custom_components` directory in your HomeAssistant configuration.
+1. Add this repository as a custom repository in HACS or manually copy the `samsung_soundbar` folder to the `custom_components` directory in your Home Assistant configuration.
 
   [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=samuelspagl&repository=ha_samsung_soundbar&category=integration)
-2. Restart HomeAssistant.
+2. Restart Home Assistant.
 
 > [!NOTE]
 > It is planned to add it to the public `HACS` repository list, but not done yet.
 
 ### Configuration
 
-To integrate your Samsung Soundbar with HomeAssistant using YASSI, you'll need the following variables:
+To integrate your Samsung Soundbar with Home Assistant using YASSI, you will be asked for the following variables:
 
 - **SmartThings API Key**: [Retrieve your API key from SmartThings Tokens.](https://account.smartthings.com/tokens)
 - **Device ID**: [Find your device ID at SmartThings Devices.](https://my.smartthings.com/advanced/devices)
-- **Device Name**: Choose a name for your soundbar to be recognized in HomeAssistant.
+- **Device Name**: Choose a name for your soundbar to be recognized in Home Assistant.
 - **Max Volume**: Define the maximum volume level for the `media_player` slider (between `1` and `100`).
-
-Please use the HomeAssistant UI to setup the integration, providing a yaml configuration in the `configuration.yaml`
-should be possible but is not recommended.
 
 ## Support
 
