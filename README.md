@@ -60,7 +60,7 @@ Before you begin, ensure you have the following:
 2. Restart Home Assistant.
 
 > [!NOTE]
-> It is planned to add it to the public `HACS` repository list, but not done yet.
+> It is planned to add it to the default `HACS` repository list, but not done yet.
 
 ### Configuration
 
