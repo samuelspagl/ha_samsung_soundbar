@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1] Documentation enhancements
+
+### Changed
+
+- Updated the `README` as well as the documentation website
+
 ## [0.3.0] Icons and Chore
 
 ### Added
