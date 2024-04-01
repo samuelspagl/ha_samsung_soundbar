@@ -5,6 +5,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pysmartthings import APIResponseError
+from voluptuous import All, Range
 
 from .const import (CONF_ENTRY_API_KEY, CONF_ENTRY_DEVICE_ID,
                     CONF_ENTRY_DEVICE_NAME, CONF_ENTRY_MAX_VOLUME, DOMAIN)
@@ -45,7 +46,7 @@ class ExampleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_ENTRY_API_KEY): str,
                     vol.Required(CONF_ENTRY_DEVICE_ID): str,
                     vol.Required(CONF_ENTRY_DEVICE_NAME): str,
-                    vol.Required(CONF_ENTRY_MAX_VOLUME): int,
+                    vol.Required(CONF_ENTRY_MAX_VOLUME, default=100): All(int, Range(min=1, max=100))
                 }
             ),
         )
