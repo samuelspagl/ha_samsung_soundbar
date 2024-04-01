@@ -10,6 +10,27 @@
                   },
                   "description": "Bitte gib deine Daten ein.",
                   "title": "Authentifizierung"
+            },
+            "device":{
+                "data" : {
+                    "settings_advanced_audio": "'Advanced Audio switches' aktivieren (NightMode, BassMode, VoiceEnhancer)",
+                    "settings_eq": "'EQ selector' aktivieren",
+                    "settings_soundmode": "'Soundmode selector' aktivieren",
+                    "settings_woofer": "'Subwoofer Entität' aktivieren"
+                },
+                "description": "Einige Soundbars haben verschiedene Featuresets. Wähle bitte aus welche Features von deiner Soundbar supported werden (einsehbar in der SmartThings App).",
+                "title": "Geräte Einstellungen"
+            },
+            "reconfigure_confirm":{
+                "data" : {
+                    "settings_advanced_audio": "'Advanced Audio switches' aktivieren (NightMode, BassMode, VoiceEnhancer)",
+                    "settings_eq": "'EQ selector' aktivieren",
+                    "settings_soundmode": "'Soundmode selector' aktivieren",
+                    "settings_woofer": "'Subwoofer Entität' aktivieren",
+                    "device_volume": "Max Volume (int)"
+                },
+                "description": "Einige Soundbars haben verschiedene Featuresets. Wähle bitte aus welche Features von deiner Soundbar supported werden (einsehbar in der SmartThings App).",
+                "title": "Geräte Einstellungen"
             }
         }
     }

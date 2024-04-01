@@ -1,7 +1,10 @@
 import logging
 
-from homeassistant.components.sensor import (SensorDeviceClass, SensorEntity,
-                                             SensorStateClass)
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.helpers.entity import DeviceInfo
 
 from .api_extension.SoundbarDevice import SoundbarDevice

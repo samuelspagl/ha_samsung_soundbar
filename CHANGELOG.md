@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0] Add more fine grained configuration flow
+
+### Added
+
+- Configuration flow options for enable / disable
+  - "advanced audio" features (NightMode, Bassmode, VoiceEnhancer)
+  - "woofer" feature
+  - "soundmode" feature
+  - "eq" feature
+
 ## [0.3.2] Fix division by zero
 
 ### Added

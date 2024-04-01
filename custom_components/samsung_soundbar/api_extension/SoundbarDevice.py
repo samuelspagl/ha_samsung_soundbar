@@ -14,7 +14,15 @@ log = logging.getLogger(__name__)
 
 class SoundbarDevice:
     def __init__(
-        self, device: DeviceEntity, session, max_volume: int, device_name: str
+        self,
+        device: DeviceEntity,
+        session,
+        max_volume: int,
+        device_name: str,
+        enable_eq: bool = False,
+        enable_soundmode: bool = False,
+        enable_advanced_audio: bool = False,
+        enable_woofer: bool = False,
     ):
         self.device = device
         self._device_id = self.device.device_id
@@ -22,17 +30,21 @@ class SoundbarDevice:
         self.__session = session
         self.__device_name = device_name
 
+        self.__enable_soundmode = enable_soundmode
         self.__supported_soundmodes = []
         self.__active_soundmode = ""
 
+        self.__enable_woofer = enable_woofer
         self.__woofer_level = 0
         self.__woofer_connection = ""
 
+        self.__enable_eq = enable_eq
         self.__active_eq_preset = ""
         self.__supported_eq_presets = []
         self.__eq_action = ""
         self.__eq_bands = []
 
+        self.__enable_advanced_audio = enable_advanced_audio
         self.__voice_amplifier = 0
         self.__night_mode = 0
         self.__bass_mode = 0
@@ -48,11 +60,14 @@ class SoundbarDevice:
     async def update(self):
         await self.device.status.refresh()
 
-        await self._update_media()
-        await self._update_soundmode()
-        await self._update_advanced_audio()
-        await self._update_woofer()
-        await self._update_equalizer()
+        if self.__enable_soundmode:
+            await self._update_soundmode()
+        if self.__enable_advanced_audio:
+            await self._update_advanced_audio()
+        if self.__enable_soundmode:
+            await self._update_woofer()
+        if self.__enable_eq:
+            await self._update_equalizer()
 
     async def _update_media(self):
         self.__media_artist = self.device.status._attributes["audioTrackData"].value[
@@ -70,14 +85,14 @@ class SoundbarDevice:
 
     async def _update_soundmode(self):
         await self.update_execution_data(["/sec/networkaudio/soundmode"])
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1)
         payload = await self.get_execute_status()
         retry = 0
         while (
             "x.com.samsung.networkaudio.supportedSoundmode" not in payload
             and retry < 10
         ):
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(1)
             payload = await self.get_execute_status()
             retry += 1
         if retry == 10:
@@ -376,7 +391,8 @@ class SoundbarDevice:
     # ------------ SUPPORT FUNCTIONS ------------
 
     async def update_execution_data(self, argument: str):
-        return await self.device.command("main", "execute", "execute", argument)
+        stuff = await self.device.command("main", "execute", "execute", argument)
+        return stuff
 
     async def set_custom_execution_data(self, href: str, property: str, value):
         argument = [href, {property: value}]
@@ -386,8 +402,8 @@ class SoundbarDevice:
         url = f"https://api.smartthings.com/v1/devices/{self._device_id}/components/main/capabilities/execute/status"
         request_headers = {"Authorization": "Bearer " + self._api_key}
         resp = await self.__session.get(url, headers=request_headers)
-        dict = await resp.json()
-        return dict["data"]["value"]["payload"]
+        dict_stuff = await resp.json()
+        return dict_stuff["data"]["value"]["payload"]
 
     async def get_song_title_artwork(self, artist: str, title: str) -> str:
         """

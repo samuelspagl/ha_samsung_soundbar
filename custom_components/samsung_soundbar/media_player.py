@@ -1,16 +1,22 @@
 import logging
 from typing import Any, Mapping
 
-from homeassistant.components.media_player import (DEVICE_CLASS_SPEAKER,
-                                                   MediaPlayerEntity)
-from homeassistant.components.media_player.const import \
-    MediaPlayerEntityFeature
+from homeassistant.components.media_player import (
+    DEVICE_CLASS_SPEAKER,
+    MediaPlayerEntity,
+)
+from homeassistant.components.media_player.const import MediaPlayerEntityFeature
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import (CONF_ENTRY_API_KEY, CONF_ENTRY_DEVICE_ID,
-                    CONF_ENTRY_DEVICE_NAME, CONF_ENTRY_MAX_VOLUME, DOMAIN)
+from .const import (
+    CONF_ENTRY_API_KEY,
+    CONF_ENTRY_DEVICE_ID,
+    CONF_ENTRY_DEVICE_NAME,
+    CONF_ENTRY_MAX_VOLUME,
+    DOMAIN,
+)
 from .models import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)

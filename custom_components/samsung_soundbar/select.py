@@ -1,14 +1,20 @@
 import logging
 
-from homeassistant.components.number import (NumberEntity,
-                                             NumberEntityDescription,
-                                             NumberMode)
-from homeassistant.components.select import (SelectEntity,
-                                             SelectEntityDescription)
+from homeassistant.components.number import (
+    NumberEntity,
+    NumberEntityDescription,
+    NumberMode,
+)
+from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.helpers.entity import DeviceInfo
 
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import CONF_ENTRY_DEVICE_ID, DOMAIN
+from .const import (
+    CONF_ENTRY_DEVICE_ID,
+    CONF_ENTRY_SETTINGS_EQ_SELECTOR,
+    CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR,
+    DOMAIN,
+)
 from .models import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,12 +27,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         device_config: DeviceConfig = domain_data.devices[key]
         device = device_config.device
         if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            entities.append(
-                EqPresetSelectEntity(device, "eq_preset", "mdi:tune-vertical")
-            )
-            entities.append(
-                SoundModeSelectEntity(device, "sound_mode_preset", "mdi:surround-sound")
-            )
+            if config_entry.data.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR):
+                entities.append(
+                    EqPresetSelectEntity(device, "eq_preset", "mdi:tune-vertical")
+                )
+            if config_entry.data.get(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR):
+                entities.append(
+                    SoundModeSelectEntity(
+                        device, "sound_mode_preset", "mdi:surround-sound"
+                    )
+                )
+
             entities.append(
                 InputSelectEntity(device, "input_preset", "mdi:video-input-hdmi")
             )

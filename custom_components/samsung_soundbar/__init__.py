@@ -6,9 +6,18 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pysmartthings import SmartThings
 
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import (CONF_ENTRY_API_KEY, CONF_ENTRY_DEVICE_ID,
-                    CONF_ENTRY_DEVICE_NAME, CONF_ENTRY_MAX_VOLUME, DOMAIN,
-                    SUPPORTED_DOMAINS)
+from .const import (
+    CONF_ENTRY_API_KEY,
+    CONF_ENTRY_DEVICE_ID,
+    CONF_ENTRY_DEVICE_NAME,
+    CONF_ENTRY_MAX_VOLUME,
+    CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES,
+    CONF_ENTRY_SETTINGS_EQ_SELECTOR,
+    CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR,
+    CONF_ENTRY_SETTINGS_WOOFER_NUMBER,
+    DOMAIN,
+    SUPPORTED_DOMAINS,
+)
 from .models import DeviceConfig, SoundbarConfig
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,7 +30,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # store shell object
 
     _LOGGER.info(f"[{DOMAIN}] Starting to setup a ConfigEntry")
-    _LOGGER.debug(f"[{DOMAIN}] Setting up ConfigEntry with the following data: {entry.data}")
+    _LOGGER.debug(
+        f"[{DOMAIN}] Setting up ConfigEntry with the following data: {entry.data}"
+    )
     if not DOMAIN in hass.data:
         _LOGGER.debug(f"[{DOMAIN}] Domain not found in hass.data setting default")
         hass.data[DOMAIN] = SoundbarConfig(
@@ -48,6 +59,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             session,
             entry.data.get(CONF_ENTRY_MAX_VOLUME),
             entry.data.get(CONF_ENTRY_DEVICE_NAME),
+            enable_eq=entry.data.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR),
+            enable_advanced_audio=entry.data.get(
+                CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES
+            ),
+            enable_soundmode=entry.data.get(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR),
+            enable_woofer=entry.data.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER),
         )
         await soundbar_device.update()
         domain_config.devices[entry.data.get(CONF_ENTRY_DEVICE_ID)] = DeviceConfig(
