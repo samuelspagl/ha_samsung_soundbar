@@ -10,6 +10,10 @@
   - "soundmode" feature
   - "eq" feature
 - added `media_player` support for next and previous track
+- Service calls for:
+  - "advanced audio" features (NightMode, Bassmode, VoiceEnhancer)
+  - "woofer" feature
+  - "soundmode" feature
 
 ### Changed
 
