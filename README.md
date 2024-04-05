@@ -2,6 +2,22 @@
 
 Welcome to YASSI, the Home Assistant integration designed to bring comprehensive control over your Samsung Soundbar into your smart home ecosystem.
 
+> [!CAUTION]
+> **Soundbar Integration Issues**:
+> 
+> Samsung changed (un)intentionally? something in the SmartThings API. Therefore it is currently not possible to retrieve a status update for
+> custom capabilities like *Soundmode, EQ, Woofer and Advanced Audio settings (Nightmode, Bassmode, Voice-enhancer).
+> Other than this, the integration is working as expected.
+> 
+> **I released a new beta version where you can select for which custom capability entities should be created. If one is disabled so is the update
+> process, and therefore the error logs will disappear.**
+> 
+> It is still possible to adjust all settings of the custom capabilties, therefore the beta version features service calls for each of those.
+> For more and updated information please refer to [#26](https://github.com/samuelspagl/ha_samsung_soundbar/issues/26).
+>
+> Best Samuel ✌️
+
+
 **Table of Contents:**
 <!-- TOC -->
 * [Why YASSI](#why-yassi)
