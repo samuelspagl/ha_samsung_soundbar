@@ -33,6 +33,8 @@ SUPPORT_SMARTTHINGS_SOUNDBAR = (
     | MediaPlayerEntityFeature.TURN_OFF
     | MediaPlayerEntityFeature.TURN_ON
     | MediaPlayerEntityFeature.PLAY
+    | MediaPlayerEntityFeature.NEXT_TRACK
+    | MediaPlayerEntityFeature.PREVIOUS_TRACK
     | MediaPlayerEntityFeature.STOP
     | MediaPlayerEntityFeature.SELECT_SOUND_MODE
 )
@@ -176,6 +178,12 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_media_pause(self):
         await self.device.media_pause()
+
+    async def async_media_next_track(self):
+        await self.device.media_next_track()
+
+    async def async_media_previous_track(self):
+        await self.device.media_previous_track()
 
     async def async_media_stop(self):
         await self.device.media_stop()

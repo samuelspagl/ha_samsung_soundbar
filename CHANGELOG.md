@@ -9,6 +9,11 @@
   - "woofer" feature
   - "soundmode" feature
   - "eq" feature
+- added `media_player` support for next and previous track
+
+### Changed
+
+- Fixed state, also displaying "playing" and "paused" values
 
 ## [0.3.2] Fix division by zero
 

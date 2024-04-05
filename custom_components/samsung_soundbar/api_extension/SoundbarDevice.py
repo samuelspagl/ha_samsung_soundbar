@@ -194,7 +194,15 @@ class SoundbarDevice:
 
     @property
     def state(self) -> str:
-        return "on" if self.device.status.switch else "off"
+        if self.device.status.switch:
+            if self.device.status.playback_status == "playing":
+                return "playing"
+            if self.device.status.playback_status == "paused":
+                return "paused"
+            else:
+                return "on"
+        else:
+            return "off"
 
     async def switch_off(self):
         await self.device.switch_off(True)
@@ -376,6 +384,12 @@ class SoundbarDevice:
 
     async def media_stop(self):
         await self.device.stop(True)
+
+    async def media_next_track(self):
+        await self.device.command("main", "mediaPlayback", "fastForward")
+
+    async def media_previous_track(self):
+        await self.device.command("main", "mediaPlayback", "rewind")
 
     @property
     def media_app_name(self):
