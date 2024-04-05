@@ -60,6 +60,8 @@ class SoundbarDevice:
     async def update(self):
         await self.device.status.refresh()
 
+        await self._update_media()
+
         if self.__enable_soundmode:
             await self._update_soundmode()
         if self.__enable_advanced_audio:

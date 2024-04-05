@@ -33,5 +33,15 @@
                 "title": "Device Settings"
             }
         }
-    }
+    },
+    "selector": {
+        "soundmode": {
+        "options": {
+            "standard": "Standard",
+            "surround": "Surround",
+            "game": "Gaming",
+            "adaptive sound": "Adaptive Sound"
+        }
+        }
+  }
 }

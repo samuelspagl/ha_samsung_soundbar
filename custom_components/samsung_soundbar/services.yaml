@@ -1,0 +1,88 @@
+
+select_soundmode:
+  name: Select Soundmode
+  description: Some Soundbars support different "sound modes". If supported you can select them here.
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    sound_mode:
+      name: Sound Mode
+      description: Select the Soundmode you are interested in.
+      required: true
+      example: "adaptive sound"
+      # The default field value
+      default: "standard"
+      # Selector (https://www.home-assistant.io/docs/blueprint/selectors/) to control
+      # the input UI for this field
+      selector:
+        select:
+          translation_key: "soundmode"
+          options:
+            - "standard"
+            - "surround"
+            - "game"
+            - "adaptive sound"
+
+set_woofer_level:
+  name: Set Woofer level
+  description: Set the subwoofer level of your soundbar
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    level:
+      name: Volume level
+      required: true
+      example: 3
+      default: 0
+      selector:
+        number:
+          min: -12
+          max: 6
+          step: 1
+
+set_night_mode:
+  name: Set NightMode
+  description: Activates / deactivates the Nightmode
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    enabled:
+      name: Enabled / Disabled
+      required: true
+      example: true
+      default: false
+      selector:
+        boolean:
+
+set_bass_enhancer:
+  name: Set bass enhancement
+  description: Activates / deactivates the bass enhancement
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    enabled:
+      name: Enabled / Disabled
+      required: true
+      example: true
+      default: false
+      selector:
+        boolean:
+
+set_voice_enhancer:
+  name: Set voice enhancement
+  description: Activates / deactivates the voice enhancement
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    enabled:
+      name: Enabled / Disabled
+      required: true
+      example: true
+      default: false
+      selector:
+        boolean:

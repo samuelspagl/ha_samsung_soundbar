@@ -8,6 +8,9 @@ from homeassistant.components.media_player import (
 from homeassistant.components.media_player.const import MediaPlayerEntityFeature
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
+from homeassistant.helpers import config_validation as cv, entity_platform, selector
+import voluptuous as vol
+
 
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .const import (
@@ -40,8 +43,46 @@ SUPPORT_SMARTTHINGS_SOUNDBAR = (
 )
 
 
+def addServices():
+    platform = entity_platform.async_get_current_platform()
+
+    platform.async_register_entity_service(
+        "select_soundmode",
+        cv.make_entity_service_schema({vol.Required("sound_mode"): str}),
+        SmartThingsSoundbarMediaPlayer.async_select_sound_mode.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "set_woofer_level",
+        cv.make_entity_service_schema(
+            {vol.Required("level"): vol.All(int, vol.Range(min=-12, max=6))}
+        ),
+        SmartThingsSoundbarMediaPlayer.async_set_woofer_level.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "set_night_mode",
+        cv.make_entity_service_schema({vol.Required("enabled"): bool}),
+        SmartThingsSoundbarMediaPlayer.async_set_night_mode.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "set_bass_enhancer",
+        cv.make_entity_service_schema({vol.Required("enabled"): bool}),
+        SmartThingsSoundbarMediaPlayer.async_set_bass_mode.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "set_voice_enhancer",
+        cv.make_entity_service_schema({vol.Required("enabled"): bool}),
+        SmartThingsSoundbarMediaPlayer.async_set_voice_mode.__name__,
+    )
+
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     domain_data = hass.data[DOMAIN]
+
+    addServices()
 
     entities = []
     for key in domain_data.devices:
@@ -187,6 +228,20 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_media_stop(self):
         await self.device.media_stop()
+
+    # ---------- SERVICE_UTILITY ------------
+
+    async def async_set_woofer_level(self, level: int):
+        await self.device.set_woofer(level)
+
+    async def async_set_bass_mode(self, enabled: bool):
+        await self.device.set_bass_mode(enabled)
+
+    async def async_set_voice_mode(self, enabled: bool):
+        await self.device.set_voice_amplifier(enabled)
+
+    async def async_set_night_mode(self, enabled: bool):
+        await self.device.set_night_mode(enabled)
 
     # This property can be uncommented for some extra_attributes
     # Still enabling this can cause side-effects.
