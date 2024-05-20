@@ -92,6 +92,20 @@ def addServices():
         SmartThingsSoundbarMediaPlayer.async_set_rear_speaker_mode.__name__,
     )
 
+    platform.async_register_entity_service(
+        "set_active_voice_amplifier",
+        cv.make_entity_service_schema({vol.Required("enabled"): bool}),
+        SmartThingsSoundbarMediaPlayer.async_set_active_voice_amplifier.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "set_space_fit_sound",
+        cv.make_entity_service_schema({vol.Required("enabled"): bool}),
+        SmartThingsSoundbarMediaPlayer.async_set_space_fit_sound.__name__,
+    )
+
+
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     domain_data = hass.data[DOMAIN]
@@ -266,6 +280,12 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_set_rear_speaker_mode(self, speaker_mode: str):
         await self.device.set_rear_speaker_mode(RearSpeakerMode(speaker_mode))
+
+    async def async_set_active_voice_amplifier(self, enabled: bool):
+        await self.device.set_active_voice_amplifier(enabled)
+
+    async def async_set_space_fit_sound(self, enabled: bool):
+        await self.device.set_space_fit_sound(enabled)
 
     # This property can be uncommented for some extra_attributes
     # Still enabling this can cause side-effects.

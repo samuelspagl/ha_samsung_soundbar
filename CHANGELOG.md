@@ -16,6 +16,8 @@
   - "soundmode" feature
   - "speaker_level"
   - "rear_speaker_mode"
+  - "space_fit_sound"
+  - "active_voice_amplifier"
 
 ### Changed
 

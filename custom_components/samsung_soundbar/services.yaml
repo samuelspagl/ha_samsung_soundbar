@@ -134,4 +134,34 @@ set_rear_speaker_mode:
           translation_key: "speaker_identifier"
           options:
             - "Rear"
-            - "Front" 
+            - "Front"
+
+set_active_voice_amplifier:
+  name: Set active voice amplifier
+  description: Activates / deactivates the active voice amplifier
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    enabled:
+      name: Enabled / Disabled
+      required: true
+      example: true
+      default: false
+      selector:
+        boolean:
+
+set_space_fit_sound:
+  name: Set SpaceFitSound
+  description: Activates / deactivates the SpaceFitSound
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    enabled:
+      name: Enabled / Disabled
+      required: true
+      example: true
+      default: false
+      selector:
+        boolean:

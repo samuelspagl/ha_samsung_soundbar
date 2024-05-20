@@ -14,15 +14,15 @@ log = logging.getLogger(__name__)
 
 class SoundbarDevice:
     def __init__(
-        self,
-        device: DeviceEntity,
-        session,
-        max_volume: int,
-        device_name: str,
-        enable_eq: bool = False,
-        enable_soundmode: bool = False,
-        enable_advanced_audio: bool = False,
-        enable_woofer: bool = False,
+            self,
+            device: DeviceEntity,
+            session,
+            max_volume: int,
+            device_name: str,
+            enable_eq: bool = False,
+            enable_soundmode: bool = False,
+            enable_advanced_audio: bool = False,
+            enable_woofer: bool = False,
     ):
         self.device = device
         self._device_id = self.device.device_id
@@ -91,8 +91,8 @@ class SoundbarDevice:
         payload = await self.get_execute_status()
         retry = 0
         while (
-            "x.com.samsung.networkaudio.supportedSoundmode" not in payload
-            and retry < 10
+                "x.com.samsung.networkaudio.supportedSoundmode" not in payload
+                and retry < 10
         ):
             await asyncio.sleep(1)
             payload = await self.get_execute_status()
@@ -418,6 +418,22 @@ class SoundbarDevice:
             href="/sec/networkaudio/surroundspeaker",
             property="x.com.samsung.networkaudio.currentRearPosition",
             value=mode.value,
+        )
+
+    # ------------ OTHER FUNCTIONS ------------
+
+    async def set_active_voice_amplifier(self, enabled: bool):
+        await self.set_custom_execution_data(
+            href="/sec/networkaudio/activeVoiceAmplifier",
+            property="x.com.samsung.networkaudio.activeVoiceAmplifier",
+            value=1 if enabled else 0
+        )
+
+    async def set_space_fit_sound(self, enabled: bool):
+        await self.set_custom_execution_data(
+            href="/sec/networkaudio/spacefitSound",
+            property="x.com.samsung.networkaudio.spacefitSound",
+            value=1 if enabled else 0
         )
 
     # ------------ SUPPORT FUNCTIONS ------------
