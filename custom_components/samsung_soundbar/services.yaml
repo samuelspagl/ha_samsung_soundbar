@@ -131,7 +131,7 @@ set_rear_speaker_mode:
       example: Rear
       selector:
         select:
-          translation_key: "speaker_identifier"
+          translation_key: "rear_speaker_mode"
           options:
             - "Rear"
             - "Front"

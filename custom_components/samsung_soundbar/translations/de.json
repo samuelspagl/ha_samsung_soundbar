@@ -33,5 +33,31 @@
                 "title": "Geräte Einstellungen"
             }
         }
-    }
+    },
+    "selector": {
+        "soundmode": {
+            "options": {
+                "standard": "Standard",
+                "surround": "Surround",
+                "game": "Gaming",
+                "adaptive sound": "Adaptive Sound"
+            }
+        },
+        "speaker_identifier": {
+            "options": {
+                "Spk_Center": "Center",
+                "Spk_Side": "Side",
+                "Spk_Wide": "Wide",
+                "Spk_Front_Top": "Front Top",
+                "Spk_Rear": "Rear",
+                "Spk_Rear_Top": "Rear Top"
+            }
+        },
+        "rear_speaker_mode": {
+            "options": {
+                "Rear": "Rear",
+                "Front": "Front"
+            }
+        }
+  }
 }
