@@ -11,8 +11,8 @@ from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 from homeassistant.helpers import config_validation as cv, entity_platform, selector
 import voluptuous as vol
 
-
 from .api_extension.SoundbarDevice import SoundbarDevice
+from .api_extension.const import SpeakerIdentifier, RearSpeakerMode
 from .const import (
     CONF_ENTRY_API_KEY,
     CONF_ENTRY_DEVICE_ID,
@@ -76,6 +76,20 @@ def addServices():
         "set_voice_enhancer",
         cv.make_entity_service_schema({vol.Required("enabled"): bool}),
         SmartThingsSoundbarMediaPlayer.async_set_voice_mode.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "set_speaker_level",
+        cv.make_entity_service_schema(
+            {vol.Required("speaker_identifier"): str, vol.Required("level"): int}
+        ),
+        SmartThingsSoundbarMediaPlayer.async_set_speaker_level.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "set_rear_speaker_mode",
+        cv.make_entity_service_schema({vol.Required("speaker_mode"): str}),
+        SmartThingsSoundbarMediaPlayer.async_set_rear_speaker_mode.__name__,
     )
 
 
@@ -242,6 +256,16 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_set_night_mode(self, enabled: bool):
         await self.device.set_night_mode(enabled)
+
+    # ---------- SERVICE_UTILITY ------------
+
+    async def async_set_speaker_level(self, speaker_identifier: str, level: int):
+        await self.device.set_speaker_level(
+            SpeakerIdentifier(speaker_identifier), level
+        )
+
+    async def async_set_rear_speaker_mode(self, speaker_mode: str):
+        await self.device.set_rear_speaker_mode(RearSpeakerMode(speaker_mode))
 
     # This property can be uncommented for some extra_attributes
     # Still enabling this can cause side-effects.

@@ -14,6 +14,8 @@
   - "advanced audio" features (NightMode, Bassmode, VoiceEnhancer)
   - "woofer" feature
   - "soundmode" feature
+  - "speaker_level"
+  - "rear_speaker_mode"
 
 ### Changed
 

@@ -2,11 +2,11 @@ import asyncio
 import datetime
 import json
 import logging
-import time
 from urllib.parse import quote
 
 from pysmartthings import DeviceEntity
 
+from .const import SpeakerIdentifier, RearSpeakerMode
 from ..const import DOMAIN
 
 log = logging.getLogger(__name__)
@@ -404,6 +404,22 @@ class SoundbarDevice:
     def media_coverart_updated(self) -> datetime.datetime:
         return self.__media_cover_url_update_time
 
+    # ------------ Speaker Level ----------------
+
+    async def set_speaker_level(self, speaker: SpeakerIdentifier, level: int):
+        await self.set_custom_execution_data(
+            href="/sec/networkaudio/channelVolume",
+            property="x.com.samsung.networkaudio.channelVolume",
+            value=[{"name": speaker.value, "value": level}],
+        )
+
+    async def set_rear_speaker_mode(self, mode: RearSpeakerMode):
+        await self.set_custom_execution_data(
+            href="/sec/networkaudio/surroundspeaker",
+            property="x.com.samsung.networkaudio.currentRearPosition",
+            value=mode.value,
+        )
+
     # ------------ SUPPORT FUNCTIONS ------------
 
     async def update_execution_data(self, argument: str):
@@ -412,7 +428,7 @@ class SoundbarDevice:
 
     async def set_custom_execution_data(self, href: str, property: str, value):
         argument = [href, {property: value}]
-        await self.device.command("main", "execute", "execute", argument)
+        assert await self.device.command("main", "execute", "execute", argument)
 
     async def get_execute_status(self):
         url = f"https://api.smartthings.com/v1/devices/{self._device_id}/components/main/capabilities/execute/status"

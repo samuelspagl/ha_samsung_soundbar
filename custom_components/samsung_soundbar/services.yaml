@@ -86,3 +86,52 @@ set_voice_enhancer:
       default: false
       selector:
         boolean:
+
+set_speaker_level:
+  name: Set Speaker level
+  description: Set the speaker levels of your soundbar
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    speaker_identifier:
+      name: Speaker Identifier
+      required: true
+      example: Spk_Center
+      selector:
+        select:
+          translation_key: "speaker_identifier"
+          options:
+            - "Spk_Center"
+            - "Spk_Side"
+            - "Spk_Wide"
+            - "Spk_Front_Top"
+            - "Spk_Rear"
+            - "Spk_Rear_Top"
+    level:
+      name: Speaker Level
+      required: true
+      example: 0
+      selector:
+        number:
+          min: -6
+          max: 6
+          step: 1
+
+set_rear_speaker_mode:
+  name: Set rear speaker mode
+  description: Set the rear speaker mode of your soundbar
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    speaker_mode:
+      name: Speaker mode
+      required: true
+      example: Rear
+      selector:
+        select:
+          translation_key: "speaker_identifier"
+          options:
+            - "Rear"
+            - "Front" 
