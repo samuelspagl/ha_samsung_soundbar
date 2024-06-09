@@ -67,19 +67,43 @@
     },
     "set_woofer_level":{
         "name": "Subwoofer Level setzen",
-        "description": "Verändere die Lautstärke deines Subwoofers."
+        "description": "Verändere die Lautstärke deines Subwoofers.",
+        "fields":{
+            "level":{
+                "name": "Volume Level",
+                "description": "Subwoofer Level, von -12 bis +6"
+            }
+        }
     },
     "set_night_mode":{
         "name": "Nachtmodus setzen",
-        "description": "Schalte den 'Nachtmodus' an / aus."
+        "description": "Schalte den 'Nachtmodus' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
+            }
+        }
     },
     "set_bass_enhancer":{
         "name": "Bassmodus setzen",
-        "description": "Schalte den 'Bassmodus' an / aus."
+        "description": "Schalte den 'Bassmodus' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
+            }
+        }
     },
     "set_voice_enhancer":{
         "name": "Stimmenverbesserer setzen",
-        "description": "Schalte den 'Stimmenverbesserer' an / aus."
+        "description": "Schalte den 'Stimmenverbesserer' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
+            }
+        }
     },
     "set_speaker_level":{
         "name": "Lautsprecher level verändern",
@@ -91,11 +115,23 @@
     },
     "set_active_voice_amplifier":{
         "name": "Stimmenverstärker setzen",
-        "description": "Schalte den 'Stimmenverstärker' an / aus."
+        "description": "Schalte den 'Stimmenverstärker' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
+            }
+        }
     },
     "set_space_fit_sound":{
         "name": "SpaceFitSound setzen",
-        "description": "Schalte den 'SpaceFitSound' an / aus."
+        "description": "Schalte den 'SpaceFitSound' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
+            }
+        }
     }
   }
 }
