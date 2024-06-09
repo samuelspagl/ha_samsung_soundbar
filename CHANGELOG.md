@@ -1,6 +1,14 @@
 # Changelog
 
-## [0.4.0] Add more fine grained configuration flow
+## [0.4.0] Started with an "ick", but is now packed with new features 💪
+
+> ⚠️ Please read the following carefully:
+> This release is a bit special. As "something" on Samsung's side changed,
+> it is currently not possible to retrieve the status of "custom capabilities", eg.
+> woofer, soundmode, eq, and others. Therefore I decided to give the option to
+> disable the entities of these features as the value of these entities is not trustworthy.
+> Instead I implemented all of these and more (thanks to @jakeycrx) as service calls.
+> Have fun using them!
 
 ### Added
 
