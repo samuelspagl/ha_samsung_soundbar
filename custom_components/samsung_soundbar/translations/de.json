@@ -59,5 +59,43 @@
                 "Front": "Front"
             }
         }
+  },
+  "services":{
+    "select_soundmode":{
+        "name": "SoundMode auswählen",
+        "description": "Wähle hier zwischen, 'Standard', 'Surround', 'Game' und 'Adaptive Sound'."
+    },
+    "set_woofer_level":{
+        "name": "Subwoofer Level setzen",
+        "description": "Verändere die Lautstärke deines Subwoofers."
+    },
+    "set_night_mode":{
+        "name": "Nachtmodus setzen",
+        "description": "Schalte den 'Nachtmodus' an / aus."
+    },
+    "set_bass_enhancer":{
+        "name": "Bassmodus setzen",
+        "description": "Schalte den 'Bassmodus' an / aus."
+    },
+    "set_voice_enhancer":{
+        "name": "Stimmenverbesserer setzen",
+        "description": "Schalte den 'Stimmenverbesserer' an / aus."
+    },
+    "set_speaker_level":{
+        "name": "Lautsprecher level verändern",
+        "description": "Verändere die Lautstärke der einzelnen Lautsprecher"
+    },
+    "set_rear_speaker_mode":{
+        "name": "Modus der hinteren Lautsprecher setzen",
+        "description": "Nutze deine Rücklautsprecher, als 'Vorder-' oder 'Rücklautsprecher'."
+    },
+    "set_active_voice_amplifier":{
+        "name": "Stimmenverstärker setzen",
+        "description": "Schalte den 'Stimmenverstärker' an / aus."
+    },
+    "set_space_fit_sound":{
+        "name": "SpaceFitSound setzen",
+        "description": "Schalte den 'SpaceFitSound' an / aus."
+    }
   }
 }
