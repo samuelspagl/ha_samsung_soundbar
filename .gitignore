@@ -4,6 +4,11 @@ __pycache__/
 *$py.class
 .DS_store
 
+config
+.vscode
+.ruff_cache
+
+
 # C extensions
 *.so
 .idea

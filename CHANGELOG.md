@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.4.0] Started with an "ick", but is now packed with new features 💪
+
+> ⚠️ Please read the following carefully:
+> This release is a bit special. As "something" on Samsung's side changed,
+> it is currently not possible to retrieve the status of "custom capabilities", eg.
+> woofer, soundmode, eq, and others. Therefore I decided to give the option to
+> disable the entities of these features as the value of these entities is not trustworthy.
+> Instead I implemented all of these and more (thanks to @whitebearded) as service calls.
+> Have fun using them!
+
+### Added
+
+- Configuration flow options for enable / disable
+  - "advanced audio" features (NightMode, Bassmode, VoiceEnhancer)
+  - "woofer" feature
+  - "soundmode" feature
+  - "eq" feature
+- added `media_player` support for next and previous track
+- Service calls for:
+  - "advanced audio" features (NightMode, Bassmode, VoiceEnhancer)
+  - "woofer" feature
+  - "soundmode" feature
+  - "speaker_level"
+  - "rear_speaker_mode"
+  - "space_fit_sound"
+  - "active_voice_amplifier"
+
+### Changed
+
+- Fixed state, also displaying "playing" and "paused" values
+
 ## [0.3.2] Fix division by zero
 
 ### Added

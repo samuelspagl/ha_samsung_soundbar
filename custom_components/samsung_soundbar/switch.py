@@ -4,7 +4,11 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.entity import DeviceInfo
 
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import CONF_ENTRY_DEVICE_ID, DOMAIN
+from .const import (
+    CONF_ENTRY_DEVICE_ID,
+    CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES,
+    DOMAIN,
+)
 from .models import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
@@ -18,36 +22,37 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         device_config: DeviceConfig = domain_data.devices[key]
         device = device_config.device
         if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            entities.append(
-                SoundbarSwitchAdvancedAudio(
-                    device,
-                    "nightmode",
-                    lambda: device.night_mode,
-                    device.set_night_mode,
-                    device.set_night_mode,
-                    "mdi:weather-night",
+            if config_entry.data.get(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES):
+                entities.append(
+                    SoundbarSwitchAdvancedAudio(
+                        device,
+                        "nightmode",
+                        lambda: device.night_mode,
+                        device.set_night_mode,
+                        device.set_night_mode,
+                        "mdi:weather-night",
+                    )
                 )
-            )
-            entities.append(
-                SoundbarSwitchAdvancedAudio(
-                    device,
-                    "bassmode",
-                    lambda: device.bass_mode,
-                    device.set_bass_mode,
-                    device.set_bass_mode,
-                    "mdi:speaker-wireless",
+                entities.append(
+                    SoundbarSwitchAdvancedAudio(
+                        device,
+                        "bassmode",
+                        lambda: device.bass_mode,
+                        device.set_bass_mode,
+                        device.set_bass_mode,
+                        "mdi:speaker-wireless",
+                    )
                 )
-            )
-            entities.append(
-                SoundbarSwitchAdvancedAudio(
-                    device,
-                    "voice_amplifier",
-                    lambda: device.voice_amplifier,
-                    device.set_voice_amplifier,
-                    device.set_voice_amplifier,
-                    "mdi:account-voice",
+                entities.append(
+                    SoundbarSwitchAdvancedAudio(
+                        device,
+                        "voice_amplifier",
+                        lambda: device.voice_amplifier,
+                        device.set_voice_amplifier,
+                        device.set_voice_amplifier,
+                        "mdi:account-voice",
+                    )
                 )
-            )
     async_add_entities(entities)
     return True
 

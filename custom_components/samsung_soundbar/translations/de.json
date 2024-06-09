@@ -10,7 +10,128 @@
                   },
                   "description": "Bitte gib deine Daten ein.",
                   "title": "Authentifizierung"
+            },
+            "device":{
+                "data" : {
+                    "settings_advanced_audio": "'Advanced Audio switches' aktivieren (NightMode, BassMode, VoiceEnhancer)",
+                    "settings_eq": "'EQ selector' aktivieren",
+                    "settings_soundmode": "'Soundmode selector' aktivieren",
+                    "settings_woofer": "'Subwoofer Entität' aktivieren"
+                },
+                "description": "Einige Soundbars haben verschiedene Featuresets. Wähle bitte aus welche Features von deiner Soundbar supported werden (einsehbar in der SmartThings App).",
+                "title": "Geräte Einstellungen"
+            },
+            "reconfigure_confirm":{
+                "data" : {
+                    "settings_advanced_audio": "'Advanced Audio switches' aktivieren (NightMode, BassMode, VoiceEnhancer)",
+                    "settings_eq": "'EQ selector' aktivieren",
+                    "settings_soundmode": "'Soundmode selector' aktivieren",
+                    "settings_woofer": "'Subwoofer Entität' aktivieren",
+                    "device_volume": "Max Volume (int)"
+                },
+                "description": "Einige Soundbars haben verschiedene Featuresets. Wähle bitte aus welche Features von deiner Soundbar supported werden (einsehbar in der SmartThings App).",
+                "title": "Geräte Einstellungen"
+            }
+        }
+    },
+    "selector": {
+        "soundmode": {
+            "options": {
+                "standard": "Standard",
+                "surround": "Surround",
+                "game": "Gaming",
+                "adaptive sound": "Adaptive Sound"
+            }
+        },
+        "speaker_identifier": {
+            "options": {
+                "Spk_Center": "Center",
+                "Spk_Side": "Side",
+                "Spk_Wide": "Wide",
+                "Spk_Front_Top": "Front Top",
+                "Spk_Rear": "Rear",
+                "Spk_Rear_Top": "Rear Top"
+            }
+        },
+        "rear_speaker_mode": {
+            "options": {
+                "Rear": "Rear",
+                "Front": "Front"
+            }
+        }
+  },
+  "services":{
+    "select_soundmode":{
+        "name": "SoundMode auswählen",
+        "description": "Wähle hier zwischen, 'Standard', 'Surround', 'Game' und 'Adaptive Sound'."
+    },
+    "set_woofer_level":{
+        "name": "Subwoofer Level setzen",
+        "description": "Verändere die Lautstärke deines Subwoofers.",
+        "fields":{
+            "level":{
+                "name": "Volume Level",
+                "description": "Subwoofer Level, von -12 bis +6"
+            }
+        }
+    },
+    "set_night_mode":{
+        "name": "Nachtmodus setzen",
+        "description": "Schalte den 'Nachtmodus' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
+            }
+        }
+    },
+    "set_bass_enhancer":{
+        "name": "Bassmodus setzen",
+        "description": "Schalte den 'Bassmodus' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
+            }
+        }
+    },
+    "set_voice_enhancer":{
+        "name": "Stimmenverbesserer setzen",
+        "description": "Schalte den 'Stimmenverbesserer' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
+            }
+        }
+    },
+    "set_speaker_level":{
+        "name": "Lautsprecher level verändern",
+        "description": "Verändere die Lautstärke der einzelnen Lautsprecher"
+    },
+    "set_rear_speaker_mode":{
+        "name": "Modus der hinteren Lautsprecher setzen",
+        "description": "Nutze deine Rücklautsprecher, als 'Vorder-' oder 'Rücklautsprecher'."
+    },
+    "set_active_voice_amplifier":{
+        "name": "Stimmenverstärker setzen",
+        "description": "Schalte den 'Stimmenverstärker' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
+            }
+        }
+    },
+    "set_space_fit_sound":{
+        "name": "SpaceFitSound setzen",
+        "description": "Schalte den 'SpaceFitSound' an / aus.",
+        "fields":{
+            "enabled":{
+                "name": "An / ausschalten",
+                "description": "Siehe Name."
             }
         }
     }
+  }
 }

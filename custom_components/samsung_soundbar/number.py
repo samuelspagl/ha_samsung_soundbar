@@ -1,12 +1,14 @@
 import logging
 
-from homeassistant.components.number import (NumberEntity,
-                                             NumberEntityDescription,
-                                             NumberMode)
+from homeassistant.components.number import (
+    NumberEntity,
+    NumberEntityDescription,
+    NumberMode,
+)
 from homeassistant.helpers.entity import DeviceInfo
 
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import CONF_ENTRY_DEVICE_ID, DOMAIN
+from .const import CONF_ENTRY_DEVICE_ID, CONF_ENTRY_SETTINGS_WOOFER_NUMBER, DOMAIN
 from .models import DeviceConfig
 
 _LOGGER = logging.getLogger(__name__)
@@ -19,7 +21,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     for key in domain_data.devices:
         device_config: DeviceConfig = domain_data.devices[key]
         device = device_config.device
-        if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
+        if device.device_id == config_entry.data.get(
+            CONF_ENTRY_DEVICE_ID
+        ) and config_entry.data.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER):
             entities.append(
                 SoundbarWooferNumberEntity(
                     device,

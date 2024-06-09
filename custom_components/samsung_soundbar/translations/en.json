@@ -10,7 +10,54 @@
                   },
                   "description": "Please enter your credentials.",
                   "title": "Authentication"
+            },
+            "device":{
+                "data" : {
+                    "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
+                    "settings_eq": "Enable 'EQ selector' capabilities",
+                    "settings_soundmode": "Enable 'Soundmode selector' capabilities",
+                    "settings_woofer": "Enable 'Woofer number' capability"
+                },
+                "description": "Some soundbars have a different featureset than others. Please the features supported by your soundbar (visible in the SmartThings App).",
+                "title": "Device Settings"
+            },
+            "reconfigure_confirm":{
+                "data" : {
+                    "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
+                    "settings_eq": "Enable 'EQ selector' capabilities",
+                    "settings_soundmode": "Enable 'Soundmode selector' capabilities",
+                    "settings_woofer": "Enable 'Woofer number' capability",
+                    "device_volume": "Max Volume (int)"
+                },
+                "description": "Some soundbars have a different featureset than others. Please the features supported by your soundbar (visible in the SmartThings App).",
+                "title": "Device Settings"
             }
         }
-    }
+    },
+    "selector": {
+        "soundmode": {
+            "options": {
+                "standard": "Standard",
+                "surround": "Surround",
+                "game": "Gaming",
+                "adaptive sound": "Adaptive Sound"
+            }
+        },
+        "speaker_identifier": {
+            "options": {
+                "Spk_Center": "Center",
+                "Spk_Side": "Side",
+                "Spk_Wide": "Wide",
+                "Spk_Front_Top": "Front Top",
+                "Spk_Rear": "Rear",
+                "Spk_Rear_Top": "Rear Top"
+            }
+        },
+        "rear_speaker_mode": {
+            "options": {
+                "Rear": "Rear",
+                "Front": "Front"
+            }
+        }
+  }
 }

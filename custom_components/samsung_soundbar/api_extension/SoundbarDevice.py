@@ -2,11 +2,11 @@ import asyncio
 import datetime
 import json
 import logging
-import time
 from urllib.parse import quote
 
 from pysmartthings import DeviceEntity
 
+from .const import SpeakerIdentifier, RearSpeakerMode
 from ..const import DOMAIN
 
 log = logging.getLogger(__name__)
@@ -14,7 +14,15 @@ log = logging.getLogger(__name__)
 
 class SoundbarDevice:
     def __init__(
-        self, device: DeviceEntity, session, max_volume: int, device_name: str
+            self,
+            device: DeviceEntity,
+            session,
+            max_volume: int,
+            device_name: str,
+            enable_eq: bool = False,
+            enable_soundmode: bool = False,
+            enable_advanced_audio: bool = False,
+            enable_woofer: bool = False,
     ):
         self.device = device
         self._device_id = self.device.device_id
@@ -22,17 +30,21 @@ class SoundbarDevice:
         self.__session = session
         self.__device_name = device_name
 
+        self.__enable_soundmode = enable_soundmode
         self.__supported_soundmodes = []
         self.__active_soundmode = ""
 
+        self.__enable_woofer = enable_woofer
         self.__woofer_level = 0
         self.__woofer_connection = ""
 
+        self.__enable_eq = enable_eq
         self.__active_eq_preset = ""
         self.__supported_eq_presets = []
         self.__eq_action = ""
         self.__eq_bands = []
 
+        self.__enable_advanced_audio = enable_advanced_audio
         self.__voice_amplifier = 0
         self.__night_mode = 0
         self.__bass_mode = 0
@@ -49,10 +61,15 @@ class SoundbarDevice:
         await self.device.status.refresh()
 
         await self._update_media()
-        await self._update_soundmode()
-        await self._update_advanced_audio()
-        await self._update_woofer()
-        await self._update_equalizer()
+
+        if self.__enable_soundmode:
+            await self._update_soundmode()
+        if self.__enable_advanced_audio:
+            await self._update_advanced_audio()
+        if self.__enable_soundmode:
+            await self._update_woofer()
+        if self.__enable_eq:
+            await self._update_equalizer()
 
     async def _update_media(self):
         self.__media_artist = self.device.status._attributes["audioTrackData"].value[
@@ -70,14 +87,14 @@ class SoundbarDevice:
 
     async def _update_soundmode(self):
         await self.update_execution_data(["/sec/networkaudio/soundmode"])
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1)
         payload = await self.get_execute_status()
         retry = 0
         while (
-            "x.com.samsung.networkaudio.supportedSoundmode" not in payload
-            and retry < 10
+                "x.com.samsung.networkaudio.supportedSoundmode" not in payload
+                and retry < 10
         ):
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(1)
             payload = await self.get_execute_status()
             retry += 1
         if retry == 10:
@@ -179,7 +196,15 @@ class SoundbarDevice:
 
     @property
     def state(self) -> str:
-        return "on" if self.device.status.switch else "off"
+        if self.device.status.switch:
+            if self.device.status.playback_status == "playing":
+                return "playing"
+            if self.device.status.playback_status == "paused":
+                return "paused"
+            else:
+                return "on"
+        else:
+            return "off"
 
     async def switch_off(self):
         await self.device.switch_off(True)
@@ -362,6 +387,12 @@ class SoundbarDevice:
     async def media_stop(self):
         await self.device.stop(True)
 
+    async def media_next_track(self):
+        await self.device.command("main", "mediaPlayback", "fastForward")
+
+    async def media_previous_track(self):
+        await self.device.command("main", "mediaPlayback", "rewind")
+
     @property
     def media_app_name(self):
         detail_status = self.device.status.attributes.get("detailName", None)
@@ -373,21 +404,54 @@ class SoundbarDevice:
     def media_coverart_updated(self) -> datetime.datetime:
         return self.__media_cover_url_update_time
 
+    # ------------ Speaker Level ----------------
+
+    async def set_speaker_level(self, speaker: SpeakerIdentifier, level: int):
+        await self.set_custom_execution_data(
+            href="/sec/networkaudio/channelVolume",
+            property="x.com.samsung.networkaudio.channelVolume",
+            value=[{"name": speaker.value, "value": level}],
+        )
+
+    async def set_rear_speaker_mode(self, mode: RearSpeakerMode):
+        await self.set_custom_execution_data(
+            href="/sec/networkaudio/surroundspeaker",
+            property="x.com.samsung.networkaudio.currentRearPosition",
+            value=mode.value,
+        )
+
+    # ------------ OTHER FUNCTIONS ------------
+
+    async def set_active_voice_amplifier(self, enabled: bool):
+        await self.set_custom_execution_data(
+            href="/sec/networkaudio/activeVoiceAmplifier",
+            property="x.com.samsung.networkaudio.activeVoiceAmplifier",
+            value=1 if enabled else 0
+        )
+
+    async def set_space_fit_sound(self, enabled: bool):
+        await self.set_custom_execution_data(
+            href="/sec/networkaudio/spacefitSound",
+            property="x.com.samsung.networkaudio.spacefitSound",
+            value=1 if enabled else 0
+        )
+
     # ------------ SUPPORT FUNCTIONS ------------
 
     async def update_execution_data(self, argument: str):
-        return await self.device.command("main", "execute", "execute", argument)
+        stuff = await self.device.command("main", "execute", "execute", argument)
+        return stuff
 
     async def set_custom_execution_data(self, href: str, property: str, value):
         argument = [href, {property: value}]
-        await self.device.command("main", "execute", "execute", argument)
+        assert await self.device.command("main", "execute", "execute", argument)
 
     async def get_execute_status(self):
         url = f"https://api.smartthings.com/v1/devices/{self._device_id}/components/main/capabilities/execute/status"
         request_headers = {"Authorization": "Bearer " + self._api_key}
         resp = await self.__session.get(url, headers=request_headers)
-        dict = await resp.json()
-        return dict["data"]["value"]["payload"]
+        dict_stuff = await resp.json()
+        return dict_stuff["data"]["value"]["payload"]
 
     async def get_song_title_artwork(self, artist: str, title: str) -> str:
         """
