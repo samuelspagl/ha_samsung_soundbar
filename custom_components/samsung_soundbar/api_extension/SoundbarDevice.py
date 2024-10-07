@@ -72,18 +72,19 @@ class SoundbarDevice:
             await self._update_equalizer()
 
     async def _update_media(self):
-        self.__media_artist = self.device.status._attributes["audioTrackData"].value[
-            "artist"
-        ]
-        self.__media_title = self.device.status._attributes["audioTrackData"].value[
-            "title"
-        ]
-        if self.__media_title != self.__old_media_title:
-            self.__old_media_title = self.__media_title
-            self.__media_cover_url_update_time = datetime.datetime.now()
-            self.__media_cover_url = await self.get_song_title_artwork(
-                self.__media_artist, self.__media_title
-            )
+        if "audioTrackData" in self.device.status._attributes:
+            self.__media_artist = self.device.status._attributes["audioTrackData"].value[
+                "artist"
+            ]
+            self.__media_title = self.device.status._attributes["audioTrackData"].value[
+                "title"
+            ]
+            if self.__media_title != self.__old_media_title:
+                self.__old_media_title = self.__media_title
+                self.__media_cover_url_update_time = datetime.datetime.now()
+                self.__media_cover_url = await self.get_song_title_artwork(
+                    self.__media_artist, self.__media_title
+                )
 
     async def _update_soundmode(self):
         await self.update_execution_data(["/sec/networkaudio/soundmode"])

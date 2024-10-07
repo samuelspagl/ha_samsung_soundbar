@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1] It seems some Soundbars don't like music
+
+### Fixed
+
+- As it seems that some soundbars don't have the 'audioTrackData' attribute
+  the update process now, only tries to look at the data if it is existing.
+
 ## [0.4.0] Started with an "ick", but is now packed with new features 💪
 
 > ⚠️ Please read the following carefully:
