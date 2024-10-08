@@ -373,11 +373,15 @@ class SoundbarDevice:
 
     @property
     def media_duration(self) -> int | None:
-        return self.device.status.attributes.get("totalTime").value
+        attr = self.device.status.attributes.get("totalTime", None)
+        if attr:
+            return attr.value
 
     @property
     def media_position(self) -> int | None:
-        return self.device.status.attributes.get("elapsedTime").value
+        attr = self.device.status.attributes.get("elapsedTime", None)
+        if attr:
+            return attr.value
 
     async def media_play(self):
         await self.device.play(True)
