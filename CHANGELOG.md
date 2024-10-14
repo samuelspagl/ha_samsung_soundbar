@@ -1,11 +1,14 @@
 # Changelog
 
-## [0.4.1] It seems some Soundbars don't like music
+## [0.4.1] Media Mystique: The Great Data Disappearing Act!
 
 ### Fixed
 
-- As it seems that some soundbars don't have the 'audioTrackData' attribute
-  the update process now, only tries to look at the data if it is existing.
+- Made media data (*track title*, *artist*, *length*) optional to acoomodate soundbars that don't provide this information (🥲)
+
+### Added
+
+- Add translations for the english translation file
 
 ## [0.4.0] Started with an "ick", but is now packed with new features 💪
 
