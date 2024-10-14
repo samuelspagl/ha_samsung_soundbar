@@ -72,18 +72,19 @@ class SoundbarDevice:
             await self._update_equalizer()
 
     async def _update_media(self):
-        self.__media_artist = self.device.status._attributes["audioTrackData"].value[
-            "artist"
-        ]
-        self.__media_title = self.device.status._attributes["audioTrackData"].value[
-            "title"
-        ]
-        if self.__media_title != self.__old_media_title:
-            self.__old_media_title = self.__media_title
-            self.__media_cover_url_update_time = datetime.datetime.now()
-            self.__media_cover_url = await self.get_song_title_artwork(
-                self.__media_artist, self.__media_title
-            )
+        if "audioTrackData" in self.device.status._attributes:
+            self.__media_artist = self.device.status._attributes["audioTrackData"].value[
+                "artist"
+            ]
+            self.__media_title = self.device.status._attributes["audioTrackData"].value[
+                "title"
+            ]
+            if self.__media_title != self.__old_media_title:
+                self.__old_media_title = self.__media_title
+                self.__media_cover_url_update_time = datetime.datetime.now()
+                self.__media_cover_url = await self.get_song_title_artwork(
+                    self.__media_artist, self.__media_title
+                )
 
     async def _update_soundmode(self):
         await self.update_execution_data(["/sec/networkaudio/soundmode"])
@@ -372,11 +373,15 @@ class SoundbarDevice:
 
     @property
     def media_duration(self) -> int | None:
-        return self.device.status.attributes.get("totalTime").value
+        attr = self.device.status.attributes.get("totalTime", None)
+        if attr:
+            return attr.value
 
     @property
     def media_position(self) -> int | None:
-        return self.device.status.attributes.get("elapsedTime").value
+        attr = self.device.status.attributes.get("elapsedTime", None)
+        if attr:
+            return attr.value
 
     async def media_play(self):
         await self.device.play(True)

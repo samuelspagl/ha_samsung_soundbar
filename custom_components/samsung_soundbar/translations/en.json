@@ -1,18 +1,18 @@
 {
-    "config":{
-        "step":{
-            "user":{
+    "config": {
+        "step": {
+            "user": {
                 "data": {
                     "api_key": "SmartThings API Token",
                     "device_id": "Device ID",
-                    "device_name":"Device Name",
+                    "device_name": "Device Name",
                     "device_volume": "Max Volume (int)"
-                  },
-                  "description": "Please enter your credentials.",
-                  "title": "Authentication"
+                },
+                "description": "Please enter your credentials.",
+                "title": "Authentication"
             },
-            "device":{
-                "data" : {
+            "device": {
+                "data": {
                     "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
                     "settings_eq": "Enable 'EQ selector' capabilities",
                     "settings_soundmode": "Enable 'Soundmode selector' capabilities",
@@ -21,8 +21,8 @@
                 "description": "Some soundbars have a different featureset than others. Please the features supported by your soundbar (visible in the SmartThings App).",
                 "title": "Device Settings"
             },
-            "reconfigure_confirm":{
-                "data" : {
+            "reconfigure_confirm": {
+                "data": {
                     "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
                     "settings_eq": "Enable 'EQ selector' capabilities",
                     "settings_soundmode": "Enable 'Soundmode selector' capabilities",
@@ -59,5 +59,95 @@
                 "Front": "Front"
             }
         }
-  }
+    },
+    "services": {
+        "select_soundmode": {
+            "name": "Select Sound Mode",
+            "description": "Choose between 'Standard', 'Surround', 'Game', and 'Adaptive Sound'."
+        },
+        "set_woofer_level": {
+            "name": "Set Subwoofer Level",
+            "description": "Change the volume of your subwoofer.",
+            "fields": {
+                "level": {
+                    "name": "Volume Level",
+                    "description": "Subwoofer level, from -12 to +6"
+                }
+            }
+        },
+        "set_night_mode": {
+            "name": "Set Night Mode",
+            "description": "Turn 'Night Mode' on/off.",
+            "fields": {
+                "enabled": {
+                    "name": "On/Off",
+                    "description": "See name."
+                }
+            }
+        },
+        "set_bass_enhancer": {
+            "name": "Set Bass Mode",
+            "description": "Turn 'Bass Mode' on/off.",
+            "fields": {
+                "enabled": {
+                    "name": "On/Off",
+                    "description": "See name."
+                }
+            }
+        },
+        "set_voice_enhancer": {
+            "name": "Set Voice Enhancer",
+            "description": "Turn 'Voice Enhancer' on/off.",
+            "fields": {
+                "enabled": {
+                    "name": "On/Off",
+                    "description": "See name."
+                }
+            }
+        },
+        "set_speaker_level": {
+            "name": "Change Speaker Level",
+            "description": "Change the volume of individual speakers.",
+            "fields":{
+                "speaker_identifier": {
+                    "name": "Speaker Identifier",
+                    "description": "Identifier of the speaker."
+                },
+                "level": {
+                    "name": "Level",
+                    "description": "Level of the Speaker from -6 to 6."
+                }
+            }
+        },
+        "set_rear_speaker_mode": {
+            "name": "Set Rear Speaker Mode",
+            "description": "Use your rear speakers as 'Front' or 'Rear' speakers.",
+            "fields":{
+                "speaker_mode": {
+                    "name": "Speaker mode",
+                    "description": "Weather the speaker are used as rear / front speakers."
+                }
+            }
+        },
+        "set_active_voice_amplifier": {
+            "name": "Set Voice Amplifier",
+            "description": "Turn 'Voice Amplifier' on/off.",
+            "fields": {
+                "enabled": {
+                    "name": "On/Off",
+                    "description": "See name."
+                }
+            }
+        },
+        "set_space_fit_sound": {
+            "name": "Set SpaceFitSound",
+            "description": "Turn 'SpaceFitSound' on/off.",
+            "fields": {
+                "enabled": {
+                    "name": "On/Off",
+                    "description": "See name."
+                }
+            }
+        }
+    }
 }

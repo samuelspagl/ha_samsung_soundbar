@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.1] Media Mystique: The Great Data Disappearing Act!
+
+### Fixed
+
+- Made media data (*track title*, *artist*, *length*) optional to acoomodate soundbars that don't provide this information (🥲)
+
+### Added
+
+- Add translations for the english translation file
+
 ## [0.4.0] Started with an "ick", but is now packed with new features 💪
 
 > ⚠️ Please read the following carefully:
