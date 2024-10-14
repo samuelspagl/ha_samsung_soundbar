@@ -107,11 +107,27 @@
         },
         "set_speaker_level": {
             "name": "Change Speaker Level",
-            "description": "Change the volume of individual speakers."
+            "description": "Change the volume of individual speakers.",
+            "fields":{
+                "speaker_identifier": {
+                    "name": "Speaker Identifier",
+                    "description": "Identifier of the speaker."
+                },
+                "level": {
+                    "name": "Level",
+                    "description": "Level of the Speaker from -6 to 6."
+                }
+            }
         },
         "set_rear_speaker_mode": {
             "name": "Set Rear Speaker Mode",
-            "description": "Use your rear speakers as 'Front' or 'Rear' speakers."
+            "description": "Use your rear speakers as 'Front' or 'Rear' speakers.",
+            "fields":{
+                "speaker_mode": {
+                    "name": "Speaker mode",
+                    "description": "Weather the speaker are used as rear / front speakers."
+                }
+            }
         },
         "set_active_voice_amplifier": {
             "name": "Set Voice Amplifier",

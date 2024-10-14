@@ -107,11 +107,27 @@
     },
     "set_speaker_level":{
         "name": "Lautsprecher level verändern",
-        "description": "Verändere die Lautstärke der einzelnen Lautsprecher"
+        "description": "Verändere die Lautstärke der einzelnen Lautsprecher",
+        "fields":{
+                "speaker_identifier": {
+                    "name": "Lautsprecher",
+                    "description": "Auszuwählender Lautsprecher"
+                },
+                "level": {
+                    "name": "Lautstärke Level",
+                    "description": "Lautstärke Level zwischen -6 und 6."
+                }
+            }
     },
     "set_rear_speaker_mode":{
         "name": "Modus der hinteren Lautsprecher setzen",
-        "description": "Nutze deine Rücklautsprecher, als 'Vorder-' oder 'Rücklautsprecher'."
+        "description": "Nutze deine Rücklautsprecher, als 'Vorder-' oder 'Rücklautsprecher'.",
+        "fields":{
+                "speaker_mode": {
+                    "name": "Lautsprecher Modus",
+                    "description": "Nutze den Lautsprecher als Front oder Rear Speaker."
+                }
+            }
     },
     "set_active_voice_amplifier":{
         "name": "Stimmenverstärker setzen",
