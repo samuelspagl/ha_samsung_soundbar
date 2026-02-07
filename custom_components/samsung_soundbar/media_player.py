@@ -1,15 +1,21 @@
 import logging
 from typing import Any, Mapping
 
-from homeassistant.components.media_player import (
-    DEVICE_CLASS_SPEAKER,
-    MediaPlayerEntity,
-)
+from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.components.media_player.const import MediaPlayerEntityFeature
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 from homeassistant.helpers import config_validation as cv, entity_platform, selector
 import voluptuous as vol
+
+# NOTE:
+# Home Assistant removed DEVICE_CLASS_SPEAKER from newer versions, which caused an
+# ImportError and prevented the integration from loading. Keep compatibility with
+# both old and new HA versions by falling back to the canonical string value.
+try:
+    from homeassistant.components.media_player import DEVICE_CLASS_SPEAKER
+except ImportError:  # pragma: no cover - depends on HA version
+    DEVICE_CLASS_SPEAKER = "speaker"
 
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .api_extension.const import SpeakerIdentifier, RearSpeakerMode
