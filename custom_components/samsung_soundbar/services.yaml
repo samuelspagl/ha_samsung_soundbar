@@ -165,3 +165,95 @@ set_space_fit_sound:
       default: false
       selector:
         boolean:
+
+set_sound_from:
+  name: Set Sound From
+  description: Set the SamsungVD soundFrom mode (raw integer) and optional detail name.
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    mode:
+      name: Mode
+      required: true
+      example: 4
+      selector:
+        number:
+          min: 0
+          max: 20
+          step: 1
+    detail_name:
+      name: Detail Name
+      required: false
+      example: "HDMI"
+      selector:
+        text:
+
+play_track:
+  name: Play Track
+  description: Play an audio track URI on the soundbar.
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    uri:
+      name: URI
+      required: true
+      example: "https://example.com/sound.mp3"
+      selector:
+        text:
+    level:
+      name: Level
+      required: false
+      example: 30
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+
+play_track_and_restore:
+  name: Play Track And Restore
+  description: Play an audio track URI on the soundbar and restore the previous state.
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    uri:
+      name: URI
+      required: true
+      example: "https://example.com/sound.mp3"
+      selector:
+        text:
+    level:
+      name: Level
+      required: false
+      example: 30
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+
+play_track_and_resume:
+  name: Play Track And Resume
+  description: Play an audio track URI on the soundbar and resume playback afterwards.
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    uri:
+      name: URI
+      required: true
+      example: "https://example.com/sound.mp3"
+      selector:
+        text:
+    level:
+      name: Level
+      required: false
+      example: 30
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
