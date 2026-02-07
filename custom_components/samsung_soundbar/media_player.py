@@ -217,14 +217,8 @@ class SmartThingsSoundbarMediaPlayer(CoordinatorEntity[SoundbarCoordinator], Med
         if not (self.source_list or []):
             features &= ~MediaPlayerEntityFeature.SELECT_SOURCE
 
-        # Only advertise playback controls if the underlying device supports them.
-        # Newer OCF soundbars often do not expose media playback capabilities.
-        if hasattr(self.device.device, "play"):
-            features |= MediaPlayerEntityFeature.PLAY
-        if hasattr(self.device.device, "pause"):
-            features |= MediaPlayerEntityFeature.PAUSE
-        if hasattr(self.device.device, "stop"):
-            features |= MediaPlayerEntityFeature.STOP
+        # Newer OCF soundbars often do not expose media playback capabilities, so we don't
+        # advertise PLAY/PAUSE/STOP unless explicitly added later.
         return features
 
     @property
@@ -383,22 +377,19 @@ class SmartThingsSoundbarMediaPlayer(CoordinatorEntity[SoundbarCoordinator], Med
 
     async def async_set_sound_from(self, mode: int, detail_name: str | None = None):
         args = [mode] if not detail_name else [mode, detail_name]
-        await self.device.device.command("main", "samsungvd.soundFrom", "setSoundFrom", args)
+        await self.device.command("samsungvd.soundFrom", "setSoundFrom", args)
         await self.coordinator.async_request_refresh()
 
     async def async_play_track(self, uri: str, level: int | None = None):
-        args = [uri] if level is None else [uri, level]
-        await self.device.device.command("main", "audioNotification", "playTrack", args)
+        await self.device.play_track(uri, level)
         await self.coordinator.async_request_refresh()
 
     async def async_play_track_and_restore(self, uri: str, level: int | None = None):
-        args = [uri] if level is None else [uri, level]
-        await self.device.device.command("main", "audioNotification", "playTrackAndRestore", args)
+        await self.device.play_track_and_restore(uri, level)
         await self.coordinator.async_request_refresh()
 
     async def async_play_track_and_resume(self, uri: str, level: int | None = None):
-        args = [uri] if level is None else [uri, level]
-        await self.device.device.command("main", "audioNotification", "playTrackAndResume", args)
+        await self.device.play_track_and_resume(uri, level)
         await self.coordinator.async_request_refresh()
 
     async def async_execute_set(self, href: str, property: str, value: str):

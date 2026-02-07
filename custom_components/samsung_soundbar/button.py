@@ -38,9 +38,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                     key="next_input_source",
                     name="Next Input Source",
                     icon="mdi:skip-next",
-                    press=lambda d: d.device.command(
-                        "main", "samsungvd.audioInputSource", "setNextInputSource"
-                    ),
+                    press=lambda d: d.command("samsungvd.audioInputSource", "setNextInputSource", []),
                 ),
             ]
         )
@@ -71,4 +69,3 @@ class SoundbarButton(CoordinatorEntity, ButtonEntity):
         dev: SoundbarDevice = self.coordinator.data
         await self._press(dev)
         await self.coordinator.async_request_refresh()
-

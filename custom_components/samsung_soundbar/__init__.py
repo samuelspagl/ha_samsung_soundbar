@@ -2,11 +2,10 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from pysmartthings import SmartThings
 
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .coordinator import SoundbarCoordinator
+from .smartthings_api import SmartThingsApi
 from .const import (
     CONF_ENTRY_API_KEY,
     CONF_ENTRY_DEVICE_ID,
@@ -35,9 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not DOMAIN in hass.data:
         _LOGGER.debug(f"[{DOMAIN}] Domain not found in hass.data setting default")
         hass.data[DOMAIN] = SoundbarConfig(
-            SmartThings(
-                async_get_clientsession(hass), entry.data.get(CONF_ENTRY_API_KEY)
-            ),
+            SmartThingsApi(hass, entry.data.get(CONF_ENTRY_API_KEY)),
             {},
         )
 
@@ -49,16 +46,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug(
             f"[{DOMAIN}] DeviceId: {entry.data.get(CONF_ENTRY_DEVICE_ID)} not found in domain_config, setting up new device."
         )
-        smart_things_device = await domain_config.api.device(
-            entry.data.get(CONF_ENTRY_DEVICE_ID)
-        )
-        session = async_get_clientsession(hass)
+        device_id = entry.data.get(CONF_ENTRY_DEVICE_ID)
+        await domain_config.api.get_device(device_id)
         soundbar_device = SoundbarDevice(
-            smart_things_device,
-            session,
             entry.data.get(CONF_ENTRY_API_KEY),
-            entry.data.get(CONF_ENTRY_MAX_VOLUME),
-            entry.data.get(CONF_ENTRY_DEVICE_NAME),
+            domain_config.api,
+            device_id=device_id,
+            max_volume=entry.data.get(CONF_ENTRY_MAX_VOLUME),
+            device_name=entry.data.get(CONF_ENTRY_DEVICE_NAME),
             enable_eq=entry.data.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR),
             enable_advanced_audio=entry.data.get(
                 CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES

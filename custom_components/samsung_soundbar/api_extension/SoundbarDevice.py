@@ -1,78 +1,122 @@
+from __future__ import annotations
+
 import asyncio
-import datetime
+import datetime as dt
 import json
 import logging
-from urllib.parse import quote
-
 from typing import Any
 
-from .const import SpeakerIdentifier, RearSpeakerMode
 from ..const import DOMAIN
+from ..smartthings_api import SmartThingsApi
+from .const import RearSpeakerMode, SpeakerIdentifier
 
-log = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(__name__)
 
 
 class SoundbarDevice:
+    """
+    SmartThings Soundbar wrapper using the raw SmartThings REST API.
+
+    This avoids depending on `pysmartthings`, which has had breaking API/exports
+    across versions (and caused config flow/runtime import errors).
+    """
+
     def __init__(
-            self,
-            device: Any,
-            session,
-            api_key: str,
-            max_volume: int,
-            device_name: str,
-            enable_eq: bool = False,
-            enable_soundmode: bool = False,
-            enable_advanced_audio: bool = False,
-            enable_woofer: bool = False,
-    ):
-        self.device = device
-        self._device_id = self.device.device_id
-        # Don't depend on private pysmartthings internals; pass the token from the config entry.
+        self,
+        api_key: str,
+        api: SmartThingsApi,
+        *,
+        device_id: str,
+        max_volume: int,
+        device_name: str,
+        enable_eq: bool = False,
+        enable_soundmode: bool = False,
+        enable_advanced_audio: bool = False,
+        enable_woofer: bool = False,
+    ) -> None:
+        self._api = api
         self._api_key = api_key
-        self.__session = session
+        self._device_id = device_id
+
         self.__device_name = device_name
+        self.__max_volume = int(max_volume)
 
-        self.__enable_soundmode = enable_soundmode
-        self.__supported_soundmodes = []
-        self.__active_soundmode = ""
+        # Feature flags (UI toggles)
+        self.__enable_eq = bool(enable_eq)
+        self.__enable_soundmode = bool(enable_soundmode)
+        self.__enable_advanced_audio = bool(enable_advanced_audio)
+        self.__enable_woofer = bool(enable_woofer)
 
-        self.__enable_woofer = enable_woofer
-        self.__woofer_level = 0
-        self.__woofer_connection = ""
+        # Cached REST payloads
+        self._device: dict[str, Any] | None = None
+        self._status: dict[str, Any] | None = None
+        self._main: dict[str, Any] = {}
 
-        self.__enable_eq = enable_eq
-        self.__active_eq_preset = ""
-        self.__supported_eq_presets = []
-        self.__eq_action = ""
-        self.__eq_bands = []
+        # Derived state
+        self.__supported_soundmodes: list[str] = []
+        self.__active_soundmode: str | None = None
+        self.__woofer_level: int | None = None
+        self.__woofer_connection: str | None = None
+        self.__active_eq_preset: str | None = None
+        self.__supported_eq_presets: list[str] = []
+        self.__eq_action: Any = None
+        self.__eq_bands: Any = None
+        self.__night_mode: int | None = None
+        self.__bass_mode: int | None = None
+        self.__voice_amplifier: int | None = None
 
-        self.__enable_advanced_audio = enable_advanced_audio
-        self.__voice_amplifier = 0
-        self.__night_mode = 0
-        self.__bass_mode = 0
+        # Media metadata (often not available on OCF models; keep optional)
+        self.__media_title: str | None = None
+        self.__media_artist: str | None = None
+        self.__media_cover_url: str | None = None
+        self.__media_cover_url_update_time: dt.datetime | None = None
 
-        self.__media_title = ""
-        self.__media_artist = ""
-        self.__media_cover_url = ""
-        self.__media_cover_url_update_time: datetime.datetime | None = None
-        self.__old_media_title = ""
-
-        self.__max_volume = max_volume
+        # execute/status is rate limited and for some OCF models returns null permanently.
         self.__execute_status_supported: bool | None = None
 
-    def _attr(self, name: str):
-        """Best-effort attribute lookup from SmartThings status."""
-        try:
-            attr = self.device.status.attributes.get(name)
-        except Exception:
-            attr = None
-        return attr.value if attr is not None else None
+    # ------------ REST helpers ------------
 
-    async def update(self):
-        await self.device.status.refresh()
+    async def command(self, capability: str, command: str, arguments: list[Any] | None = None) -> None:
+        cmd: dict[str, Any] = {
+            "component": "main",
+            "capability": capability,
+            "command": command,
+        }
+        if arguments is not None:
+            cmd["arguments"] = arguments
+        await self._api.send_commands(self._device_id, [cmd])
 
-        await self._update_media()
+    def _cap(self, capability: str) -> dict[str, Any]:
+        v = self._main.get(capability)
+        return v if isinstance(v, dict) else {}
 
+    def _cap_attr(self, capability: str, attr: str) -> Any:
+        cap = self._cap(capability)
+        node = cap.get(attr)
+        if isinstance(node, dict):
+            return node.get("value")
+        return None
+
+    def _attr(self, name: str) -> Any:
+        # Best-effort search across all capabilities in main.
+        for cap in self._main.values():
+            if not isinstance(cap, dict):
+                continue
+            node = cap.get(name)
+            if isinstance(node, dict) and "value" in node:
+                return node.get("value")
+        return None
+
+    async def update(self) -> None:
+        self._device = await self._api.get_device(self._device_id)
+        self._status = await self._api.get_status(self._device_id)
+        self._main = (
+            (self._status.get("components") or {}).get("main") or {}
+            if isinstance(self._status, dict)
+            else {}
+        )
+
+        # Cache fields that we expose as properties
         if self.__enable_soundmode:
             await self._update_soundmode()
         if self.__enable_advanced_audio:
@@ -82,165 +126,53 @@ class SoundbarDevice:
         if self.__enable_eq:
             await self._update_equalizer()
 
-    async def _update_media(self):
-        if "audioTrackData" in self.device.status._attributes:
-            self.__media_artist = self.device.status._attributes["audioTrackData"].value[
-                "artist"
-            ]
-            self.__media_title = self.device.status._attributes["audioTrackData"].value[
-                "title"
-            ]
-            if self.__media_title != self.__old_media_title:
-                self.__old_media_title = self.__media_title
-                self.__media_cover_url_update_time = datetime.datetime.now()
-                self.__media_cover_url = await self.get_song_title_artwork(
-                    self.__media_artist, self.__media_title
-                )
-
-    async def _update_soundmode(self):
-        if self.__execute_status_supported is False:
-            return
-        await self.update_execution_data(["/sec/networkaudio/soundmode"])
-        await asyncio.sleep(1)
-        payload = await self.get_execute_status()
-        retry = 0
-        # execute/status is rate limited and may be empty/null for some devices (e.g. newer OCF models).
-        while (
-            "x.com.samsung.networkaudio.supportedSoundmode" not in payload
-            and retry < 3
-        ):
-            await asyncio.sleep(2)
-            payload = await self.get_execute_status()
-            retry += 1
-        if "x.com.samsung.networkaudio.supportedSoundmode" not in payload:
-            log.debug(f"[{DOMAIN}] execute/status did not return soundmode payload (device may not support it).")
-            return
-
-        self.__supported_soundmodes = payload[
-            "x.com.samsung.networkaudio.supportedSoundmode"
-        ]
-        self.__active_soundmode = payload["x.com.samsung.networkaudio.soundmode"]
-
-    async def _update_woofer(self):
-        if self.__execute_status_supported is False:
-            return
-        await self.update_execution_data(["/sec/networkaudio/woofer"])
-        await asyncio.sleep(0.1)
-        payload = await self.get_execute_status()
-        retry = 0
-        while "x.com.samsung.networkaudio.woofer" not in payload and retry < 3:
-            await asyncio.sleep(1)
-            payload = await self.get_execute_status()
-            retry += 1
-        if "x.com.samsung.networkaudio.woofer" not in payload:
-            log.debug(f"[{DOMAIN}] execute/status did not return woofer payload (device may not support it).")
-            return
-        self.__woofer_level = payload["x.com.samsung.networkaudio.woofer"]
-        self.__woofer_connection = payload["x.com.samsung.networkaudio.connection"]
-
-    async def _update_equalizer(self):
-        if self.__execute_status_supported is False:
-            return
-        await self.update_execution_data(["/sec/networkaudio/eq"])
-        await asyncio.sleep(0.1)
-        payload = await self.get_execute_status()
-        retry = 0
-        while "x.com.samsung.networkaudio.EQname" not in payload and retry < 3:
-            await asyncio.sleep(1)
-            payload = await self.get_execute_status()
-            retry += 1
-        if "x.com.samsung.networkaudio.EQname" not in payload:
-            log.debug(f"[{DOMAIN}] execute/status did not return equalizer payload (device may not support it).")
-            return
-        self.__active_eq_preset = payload["x.com.samsung.networkaudio.EQname"]
-        self.__supported_eq_presets = payload[
-            "x.com.samsung.networkaudio.supportedList"
-        ]
-        self.__eq_action = payload["x.com.samsung.networkaudio.action"]
-        self.__eq_bands = payload["x.com.samsung.networkaudio.EQband"]
-
-    async def _update_advanced_audio(self):
-        if self.__execute_status_supported is False:
-            return
-        await self.update_execution_data(["/sec/networkaudio/advancedaudio"])
-        await asyncio.sleep(0.1)
-
-        payload = await self.get_execute_status()
-        retry = 0
-        while "x.com.samsung.networkaudio.nightmode" not in payload and retry < 3:
-            await asyncio.sleep(1)
-            payload = await self.get_execute_status()
-            retry += 1
-        if "x.com.samsung.networkaudio.nightmode" not in payload:
-            log.debug(f"[{DOMAIN}] execute/status did not return advanced-audio payload (device may not support it).")
-            return
-
-        self.__night_mode = payload["x.com.samsung.networkaudio.nightmode"]
-        self.__bass_mode = payload["x.com.samsung.networkaudio.bassboost"]
-        self.__voice_amplifier = payload["x.com.samsung.networkaudio.voiceamplifier"]
+    # ------------ Device information ----------
 
     @property
-    def status(self):
-        return self.device.status
-
-    # ------------ DEVICE INFORMATION ----------
+    def device_id(self) -> str:
+        return self._device_id
 
     @property
-    def manufacturer(self):
-        return self.device.status.ocf_manufacturer_name
-
-    @property
-    def model(self):
-        # Many Samsung OCF devices expose the model in ocf.mnmo (ex: HW-Q990D).
-        return self.device.status.ocf_model_number or self._attr("mnmo")
-
-    @property
-    def firmware_version(self):
-        return self.device.status.ocf_firmware_version or self._attr("mnfv")
-
-    @property
-    def device_id(self):
-        return self.device.device_id
-
-    @property
-    def device_name(self):
+    def device_name(self) -> str:
         return self.__device_name
 
-    # ------------ ON / OFF ------------
+    @property
+    def manufacturer(self) -> str | None:
+        # Prefer OCF, fallback to /devices
+        return self._attr("mnmn") or (self._device or {}).get("manufacturerName")
+
+    @property
+    def model(self) -> str | None:
+        # OCF model (mnmo) is typically set (ex: HW-Q990D)
+        return self._attr("mnmo") or (self._device or {}).get("model")
+
+    @property
+    def firmware_version(self) -> str | None:
+        return self._attr("mnfv")
+
+    # ------------ On / Off ------------
 
     @property
     def state(self) -> str:
-        try:
-            is_on = bool(getattr(self.device.status, "switch"))
-        except Exception:
-            is_on = False
-
+        sw = self._cap_attr("switch", "switch")
+        is_on = (sw == "on") or (sw is True)
         if not is_on:
             return "off"
 
-        # Optional playback status (not available on all models).
-        try:
-            pb = getattr(self.device.status, "playback_status", None)
-            if isinstance(pb, str) and pb:
-                if pb in ("playing", "paused"):
-                    return pb
-        except Exception:
-            pass
-
-        # Fallback to thingStatus (SamsungVD) if present.
-        ts = self._attr("status")
+        # thingStatus is often \"Idle\" when on.
+        ts = self._cap_attr("samsungvd.thingStatus", "status")
         if isinstance(ts, str) and ts.lower() in ("playing", "paused"):
             return ts.lower()
 
         return "on"
 
-    async def switch_off(self):
-        await self.device.switch_off(True)
+    async def switch_off(self) -> None:
+        await self.command("switch", "off", [])
 
-    async def switch_on(self):
-        await self.device.switch_on(True)
+    async def switch_on(self) -> None:
+        await self.command("switch", "on", [])
 
-    # ------------ VOLUME --------------
+    # ------------ Volume / Mute ------------
 
     @property
     def max_volume(self) -> int:
@@ -248,365 +180,343 @@ class SoundbarDevice:
 
     @property
     def volume_level(self) -> float:
-        vol = self.device.status.volume
-        if vol > self.__max_volume:
+        vol = self._cap_attr("audioVolume", "volume")
+        try:
+            vol_int = int(vol)
+        except Exception:
+            vol_int = 0
+        if vol_int > self.__max_volume:
             return 1.0
-        return self.device.status.volume / self.__max_volume
+        return vol_int / float(self.__max_volume)
 
     @property
     def volume_muted(self) -> bool:
-        return self.device.status.mute
+        return bool(self._cap_attr("audioMute", "mute"))
 
-    async def set_volume(self, volume: float):
-        """
-        Sets the volume to a certain level.
-        This respects the max volume and hovers between
-        :param volume: between 0 and 1
-        """
-        await self.device.set_volume(int(volume * self.__max_volume), True)
+    async def set_volume(self, volume: float) -> None:
+        # volume is 0..1 from HA
+        v = int(float(volume) * self.__max_volume)
+        v = max(0, min(self.__max_volume, v))
+        await self.command("audioVolume", "setVolume", [v])
 
-    async def mute_volume(self, mute: bool):
-        if mute:
-            await self.device.mute(True)
-        else:
-            await self.device.unmute(True)
+    async def mute_volume(self, mute: bool) -> None:
+        await self.command("audioMute", "mute" if mute else "unmute", [])
 
-    async def volume_up(self):
-        await self.device.volume_up(True)
+    async def volume_up(self) -> None:
+        await self.command("audioVolume", "volumeUp", [])
 
-    async def volume_down(self):
-        await self.device.volume_down(True)
+    async def volume_down(self) -> None:
+        await self.command("audioVolume", "volumeDown", [])
 
-    # ------------ WOOFER LEVEL -------------
+    # ------------ Input Sources ------------
 
     @property
-    def woofer_level(self) -> int:
-        return self.__woofer_level
+    def input_source(self) -> str | None:
+        return self._cap_attr("samsungvd.audioInputSource", "inputSource")
 
     @property
-    def woofer_connection(self) -> str:
-        return self.__woofer_connection
+    def supported_input_sources(self) -> list[str]:
+        sources = self._cap_attr("samsungvd.audioInputSource", "supportedInputSources")
+        return list(sources) if isinstance(sources, list) else []
 
-    async def set_woofer(self, level: int):
-        await self.set_custom_execution_data(
-            href="/sec/networkaudio/woofer",
-            property="x.com.samsung.networkaudio.woofer",
-            value=level,
-        )
-        self.__woofer_level = level
-
-    # ------------ INPUT SOURCE -------------
-
-    @property
-    def input_source(self):
-        # This device exposes input source via samsungvd.audioInputSource.
-        src = self._attr("inputSource")
-        if src:
-            return src
-        # fallback (older models / pysmartthings property)
-        try:
-            return self.device.status.input_source
-        except Exception:
-            return None
-
-    @property
-    def supported_input_sources(self):
-        sources = self._attr("supportedInputSources")
-        if sources:
-            return sources
-        try:
-            return self.device.status.supported_input_sources
-        except Exception:
-            return []
-
-    async def select_source(self, source: str):
-        sources = list(self.supported_input_sources or [])
+    async def select_source(self, source: str) -> None:
+        sources = self.supported_input_sources
         if not sources:
             raise ValueError("No supported input sources reported by SmartThings")
-
+        if source not in sources:
+            raise ValueError(f"Unsupported source: {source}")
         current = self.input_source
         if current == source:
             return
 
-        if source not in sources:
-            raise ValueError(f"Unsupported source: {source}")
-
-        # The capability only supports 'next' cycling on some devices.
-        # Compute a minimal number of steps to reach the target.
-        try:
-            cur_idx = sources.index(current) if current in sources else 0
-        except Exception:
-            cur_idx = 0
+        cur_idx = sources.index(current) if current in sources else 0
         tgt_idx = sources.index(source)
         steps = (tgt_idx - cur_idx) % len(sources)
         for _ in range(steps):
-            await self.device.command("main", "samsungvd.audioInputSource", "setNextInputSource")
+            await self.command("samsungvd.audioInputSource", "setNextInputSource", [])
             await asyncio.sleep(0.6)
-        await self.device.status.refresh()
+            await self._refresh_status_only()
 
-    # ------------- SOUND MODE --------------
+    async def _refresh_status_only(self) -> None:
+        self._status = await self._api.get_status(self._device_id)
+        self._main = (
+            (self._status.get("components") or {}).get("main") or {}
+            if isinstance(self._status, dict)
+            else {}
+        )
+
+    # ------------ Media metadata (limited) ------------
+
     @property
-    def sound_mode(self):
+    def media_title(self) -> str | None:
+        return self.__media_title
+
+    @property
+    def media_artist(self) -> str | None:
+        return self.__media_artist
+
+    @property
+    def media_coverart_url(self) -> str | None:
+        return self.__media_cover_url
+
+    @property
+    def media_coverart_updated(self) -> dt.datetime | None:
+        return self.__media_cover_url_update_time
+
+    @property
+    def media_duration(self) -> int | None:
+        return None
+
+    @property
+    def media_position(self) -> int | None:
+        return None
+
+    @property
+    def media_app_name(self) -> str | None:
+        return self._cap_attr("samsungvd.soundFrom", "detailName")
+
+    # Media playback is not exposed for many OCF soundbars via SmartThings.
+    # Keep stubs so entity code can call them safely if ever enabled.
+
+    async def media_play(self) -> None:
+        raise NotImplementedError("Media playback is not supported by this device via SmartThings")
+
+    async def media_pause(self) -> None:
+        raise NotImplementedError("Media playback is not supported by this device via SmartThings")
+
+    async def media_stop(self) -> None:
+        raise NotImplementedError("Media playback is not supported by this device via SmartThings")
+
+    async def media_next_track(self) -> None:
+        raise NotImplementedError("Media playback is not supported by this device via SmartThings")
+
+    async def media_previous_track(self) -> None:
+        raise NotImplementedError("Media playback is not supported by this device via SmartThings")
+
+    # ------------ Execute-based features (may not work on OCF models) ------------
+
+    async def get_execute_status(self) -> dict[str, Any]:
+        # execute status is also exposed as /status under execute.data.value
+        data = self._cap_attr("execute", "data")
+        if isinstance(data, dict):
+            payload = (data.get("payload") or {}) if isinstance(data.get("payload"), dict) else {}
+            self.__execute_status_supported = bool(payload)
+            return payload
+
+        # Fall back to dedicated endpoint (often returns null on OCF models)
+        try:
+            resp = await self._api.get(f"/devices/{self._device_id}/components/main/capabilities/execute/status")
+        except Exception:
+            self.__execute_status_supported = False
+            return {}
+        if not isinstance(resp, dict) or "error" in resp:
+            self.__execute_status_supported = False
+            return {}
+        value = ((resp.get("data") or {}).get("value"))
+        if not isinstance(value, dict):
+            self.__execute_status_supported = False
+            return {}
+        payload = value.get("payload")
+        if isinstance(payload, dict):
+            self.__execute_status_supported = True
+            return payload
+        self.__execute_status_supported = False
+        return {}
+
+    async def set_custom_execution_data(self, href: str, property: str, value: Any) -> None:
+        # execute.execute(command, args)
+        await self.command("execute", "execute", [href, {property: value}])
+
+    async def execute_set_raw(self, href: str, prop: str, value: Any) -> None:
+        await self.set_custom_execution_data(href=href, property=prop, value=value)
+
+    async def ocf_post(self, href: str, value: dict[str, Any]) -> None:
+        await self.command("ocf", "postOcfCommand", [href, value])
+
+    # The following helpers keep old service names; on OCF models they may no-op if status doesn't exist.
+
+    async def _update_soundmode(self) -> None:
+        if self.__execute_status_supported is False:
+            return
+        await self.command("execute", "execute", ["/sec/networkaudio/soundmode"])
+        await asyncio.sleep(0.5)
+        payload = await self.get_execute_status()
+        self.__supported_soundmodes = list(payload.get("x.com.samsung.networkaudio.supportedSoundmode") or [])
+        self.__active_soundmode = payload.get("x.com.samsung.networkaudio.soundmode")
+
+    async def _update_woofer(self) -> None:
+        if self.__execute_status_supported is False:
+            return
+        await self.command("execute", "execute", ["/sec/networkaudio/woofer"])
+        await asyncio.sleep(0.5)
+        payload = await self.get_execute_status()
+        self.__woofer_level = payload.get("x.com.samsung.networkaudio.woofer")
+        self.__woofer_connection = payload.get("x.com.samsung.networkaudio.connection")
+
+    async def _update_equalizer(self) -> None:
+        if self.__execute_status_supported is False:
+            return
+        await self.command("execute", "execute", ["/sec/networkaudio/eq"])
+        await asyncio.sleep(0.5)
+        payload = await self.get_execute_status()
+        self.__active_eq_preset = payload.get("x.com.samsung.networkaudio.EQname")
+        self.__supported_eq_presets = list(payload.get("x.com.samsung.networkaudio.supportedList") or [])
+        self.__eq_action = payload.get("x.com.samsung.networkaudio.action")
+        self.__eq_bands = payload.get("x.com.samsung.networkaudio.EQband")
+
+    async def _update_advanced_audio(self) -> None:
+        if self.__execute_status_supported is False:
+            return
+        await self.command("execute", "execute", ["/sec/networkaudio/advancedaudio"])
+        await asyncio.sleep(0.5)
+        payload = await self.get_execute_status()
+        self.__night_mode = payload.get("x.com.samsung.networkaudio.nightmode")
+        self.__bass_mode = payload.get("x.com.samsung.networkaudio.bassboost")
+        self.__voice_amplifier = payload.get("x.com.samsung.networkaudio.voiceamplifier")
+
+    # ------------ Sound mode (execute-based) ------------
+
+    @property
+    def sound_mode(self) -> str | None:
         return self.__active_soundmode
 
     @property
-    def supported_soundmodes(self):
+    def supported_soundmodes(self) -> list[str]:
         return self.__supported_soundmodes
 
-    async def select_sound_mode(self, sound_mode: str):
+    async def select_sound_mode(self, sound_mode: str) -> None:
         await self.set_custom_execution_data(
             href="/sec/networkaudio/soundmode",
             property="x.com.samsung.networkaudio.soundmode",
             value=sound_mode,
         )
 
-    # ------------- ADVANCED AUDIO ---------------
+    # ------------ Advanced audio toggles (execute-based) ------------
 
     @property
     def night_mode(self) -> bool:
-        return True if self.__night_mode == 1 else False
+        return bool(self.__night_mode == 1)
 
-    async def set_night_mode(self, value: bool):
+    async def set_night_mode(self, value: bool) -> None:
         await self.set_custom_execution_data(
             href="/sec/networkaudio/advancedaudio",
             property="x.com.samsung.networkaudio.nightmode",
             value=1 if value else 0,
         )
-        self.__night_mode = 1 if value else 0
 
     @property
     def bass_mode(self) -> bool:
-        return True if self.__bass_mode == 1 else False
+        return bool(self.__bass_mode == 1)
 
-    async def set_bass_mode(self, value: bool):
+    async def set_bass_mode(self, value: bool) -> None:
         await self.set_custom_execution_data(
             href="/sec/networkaudio/advancedaudio",
             property="x.com.samsung.networkaudio.bassboost",
             value=1 if value else 0,
         )
-        self.__bass_mode = 1 if value else 0
 
     @property
     def voice_amplifier(self) -> bool:
-        return True if self.__voice_amplifier == 1 else False
+        return bool(self.__voice_amplifier == 1)
 
-    async def set_voice_amplifier(self, value: bool):
+    async def set_voice_amplifier(self, value: bool) -> None:
         await self.set_custom_execution_data(
             href="/sec/networkaudio/advancedaudio",
             property="x.com.samsung.networkaudio.voiceamplifier",
             value=1 if value else 0,
         )
-        self.__voice_amplifier = 1 if value else 0
 
-    # ------------ EQUALIZER --------------
+    # ------------ Equalizer (execute-based) ------------
 
     @property
-    def active_equalizer_preset(self):
+    def active_equalizer_preset(self) -> str | None:
         return self.__active_eq_preset
 
     @property
-    def supported_equalizer_presets(self):
+    def supported_equalizer_presets(self) -> list[str]:
         return self.__supported_eq_presets
 
     @property
-    def equalizer_action(self):
+    def equalizer_action(self) -> Any:
         return self.__eq_action
 
     @property
-    def equalizer_bands(self):
+    def equalizer_bands(self) -> Any:
         return self.__eq_bands
 
-    async def set_equalizer_preset(self, preset: str):
+    async def set_equalizer_preset(self, preset: str) -> None:
         await self.set_custom_execution_data(
             href="/sec/networkaudio/eq",
             property="x.com.samsung.networkaudio.EQname",
             value=preset,
         )
 
-    # ------------- MEDIA ----------------
-    @property
-    def media_title(self):
-        return self.__media_title
+    # ------------ Woofer (execute-based) ------------
 
     @property
-    def media_artist(self):
-        return self.__media_artist
+    def woofer_level(self) -> int | None:
+        return self.__woofer_level
 
     @property
-    def media_coverart_url(self):
-        return self.__media_cover_url
+    def woofer_connection(self) -> str | None:
+        return self.__woofer_connection
 
-    @property
-    def media_duration(self) -> int | None:
-        attr = self.device.status.attributes.get("totalTime", None)
-        if attr:
-            return attr.value
+    async def set_woofer(self, level: int) -> None:
+        await self.set_custom_execution_data(
+            href="/sec/networkaudio/woofer",
+            property="x.com.samsung.networkaudio.woofer",
+            value=level,
+        )
 
-    @property
-    def media_position(self) -> int | None:
-        attr = self.device.status.attributes.get("elapsedTime", None)
-        if attr:
-            return attr.value
+    # ------------ Speaker level (execute-based) ------------
 
-    async def media_play(self):
-        if not hasattr(self.device, "play"):
-            raise NotImplementedError("Play not supported by this device")
-        await self.device.play(True)
-
-    async def media_pause(self):
-        if not hasattr(self.device, "pause"):
-            raise NotImplementedError("Pause not supported by this device")
-        await self.device.pause(True)
-
-    async def media_stop(self):
-        if not hasattr(self.device, "stop"):
-            raise NotImplementedError("Stop not supported by this device")
-        await self.device.stop(True)
-
-    async def media_next_track(self):
-        await self.device.command("main", "mediaPlayback", "fastForward")
-
-    async def media_previous_track(self):
-        await self.device.command("main", "mediaPlayback", "rewind")
-
-    @property
-    def media_app_name(self):
-        # Reported by samsungvd.soundFrom.detailName on newer models.
-        return self._attr("detailName")
-
-    @property
-    def media_coverart_updated(self) -> datetime.datetime:
-        return self.__media_cover_url_update_time
-
-    # ------------ Speaker Level ----------------
-
-    async def set_speaker_level(self, speaker: SpeakerIdentifier, level: int):
+    async def set_speaker_level(self, speaker: SpeakerIdentifier, level: int) -> None:
         await self.set_custom_execution_data(
             href="/sec/networkaudio/channelVolume",
             property="x.com.samsung.networkaudio.channelVolume",
             value=[{"name": speaker.value, "value": level}],
         )
 
-    async def set_rear_speaker_mode(self, mode: RearSpeakerMode):
+    async def set_rear_speaker_mode(self, mode: RearSpeakerMode) -> None:
         await self.set_custom_execution_data(
             href="/sec/networkaudio/surroundspeaker",
             property="x.com.samsung.networkaudio.currentRearPosition",
             value=mode.value,
         )
 
-    # ------------ OTHER FUNCTIONS ------------
-
-    async def set_active_voice_amplifier(self, enabled: bool):
+    async def set_active_voice_amplifier(self, enabled: bool) -> None:
         await self.set_custom_execution_data(
             href="/sec/networkaudio/activeVoiceAmplifier",
             property="x.com.samsung.networkaudio.activeVoiceAmplifier",
-            value=1 if enabled else 0
+            value=1 if enabled else 0,
         )
 
-    async def set_space_fit_sound(self, enabled: bool):
+    async def set_space_fit_sound(self, enabled: bool) -> None:
         await self.set_custom_execution_data(
             href="/sec/networkaudio/spacefitSound",
             property="x.com.samsung.networkaudio.spacefitSound",
-            value=1 if enabled else 0
+            value=1 if enabled else 0,
         )
 
-    # ------------ SUPPORT FUNCTIONS ------------
+    # ------------ Audio notifications (native capability) ------------
 
-    async def update_execution_data(self, argument: str):
-        stuff = await self.device.command("main", "execute", "execute", argument)
-        return stuff
+    async def play_track(self, uri: str, level: int | None = None) -> None:
+        args = [uri] if level is None else [uri, level]
+        await self.command("audioNotification", "playTrack", args)
 
-    async def set_custom_execution_data(self, href: str, property: str, value):
-        argument = [href, {property: value}]
-        assert await self.device.command("main", "execute", "execute", argument)
+    async def play_track_and_restore(self, uri: str, level: int | None = None) -> None:
+        args = [uri] if level is None else [uri, level]
+        await self.command("audioNotification", "playTrackAndRestore", args)
 
-    async def execute_set_raw(self, href: str, prop: str, value: Any):
-        """Power-user escape hatch: set any execute href/property/value."""
-        await self.set_custom_execution_data(href=href, property=prop, value=value)
+    async def play_track_and_resume(self, uri: str, level: int | None = None) -> None:
+        args = [uri] if level is None else [uri, level]
+        await self.command("audioNotification", "playTrackAndResume", args)
 
-    async def ocf_post(self, href: str, value: dict[str, Any]):
-        """Send an OCF command (if supported by the device)."""
-        await self.device.command("main", "ocf", "postOcfCommand", [href, value])
-
-    async def get_execute_status(self):
-        url = f"https://api.smartthings.com/v1/devices/{self._device_id}/components/main/capabilities/execute/status"
-        request_headers = {"Authorization": "Bearer " + self._api_key}
-        resp = await self.__session.get(url, headers=request_headers)
-        dict_stuff = await resp.json()
-        # Some devices return {"data":{"value": null}} or an error object here.
-        if not isinstance(dict_stuff, dict) or "error" in dict_stuff:
-            self.__execute_status_supported = False
-            return {}
-        data = dict_stuff.get("data") or {}
-        if not isinstance(data, dict):
-            self.__execute_status_supported = False
-            return {}
-        value = data.get("value")
-        if not isinstance(value, dict):
-            # If we consistently see null here, stop trying execute/status to avoid rate limits.
-            self.__execute_status_supported = False
-            return {}
-        payload = value.get("payload")
-        self.__execute_status_supported = isinstance(payload, dict)
-        return payload if isinstance(payload, dict) else {}
-
-    async def get_song_title_artwork(self, artist: str, title: str) -> str:
-        """
-        This function loads a Music Art Cover from iTunes based on
-        the title and the artist
-        :param artist: string
-        :param title: string
-        :return: url as string
-        """
-        query_term = f"{artist} {title}"
-        url = "https://itunes.apple.com/search?term=%s&media=music&entity=%s" % (
-            quote(query_term),
-            "musicTrack",
-        )
-        resp = await self.__session.get(url)
-        resp_dict = json.loads(await resp.text())
-        if len(resp_dict["results"]) != 0:
-            return resp_dict["results"][0]["artworkUrl100"]
+    # ------------ Read-only debug blob ------------
 
     @property
-    def retrieve_data(self):
+    def retrieve_data(self) -> dict[str, Any]:
         return {
-            "status": self.state,
-            "device_information": {
-                "model": self.model,
-                "manufacture": self.manufacturer,
-                "firmware_version": self.firmware_version,
-                "device_id": self.device_id,
-            },
-            "volume": {"level": self.volume_level, "muted": self.volume_muted},
-            "woofer": {
-                "level": self.woofer_level,
-                "connection": self.woofer_connection,
-            },
-            "source": {
-                "active_source": self.input_source,
-                "supported_sources": self.supported_input_sources,
-            },
-            "sound_mode": {
-                "active_sound_mode": self.sound_mode,
-                "supported_sound_modes": self.supported_soundmodes,
-            },
-            "advanced_audio": {
-                "night_mode": self.night_mode,
-                "bass_mode": self.bass_mode,
-                "voice_amplifier": self.voice_amplifier,
-            },
-            "equalizer": {
-                "active_preset": self.active_equalizer_preset,
-                "supported_presets": self.supported_equalizer_presets,
-                "action": self.equalizer_action,
-                "bands": self.equalizer_bands,
-            },
-            "media": {
-                "media_title": self.media_title,
-                "media_artist": self.media_artist,
-                "media_cover_url": self.media_coverart_url,
-                "media_duration": self.media_duration,
-                "media_position": self.media_position,
-            },
+            "device": self._device,
+            "status": self._status,
         }
