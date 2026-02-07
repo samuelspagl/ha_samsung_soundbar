@@ -66,7 +66,7 @@ class SoundbarDevice:
             await self._update_soundmode()
         if self.__enable_advanced_audio:
             await self._update_advanced_audio()
-        if self.__enable_soundmode:
+        if self.__enable_woofer:
             await self._update_woofer()
         if self.__enable_eq:
             await self._update_equalizer()
@@ -236,9 +236,9 @@ class SoundbarDevice:
 
     async def mute_volume(self, mute: bool):
         if mute:
-            await self.device.unmute(True)
-        else:
             await self.device.mute(True)
+        else:
+            await self.device.unmute(True)
 
     async def volume_up(self):
         await self.device.volume_up(True)
