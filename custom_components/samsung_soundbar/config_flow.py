@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from aiohttp import ClientResponseError
 import voluptuous as vol
 from homeassistant import config_entries
 from voluptuous import All, Range
@@ -59,8 +60,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.debug(
                     f"Successfully validated Input, Creating entry with title {DOMAIN} and data {user_input}"
                 )
-            except Exception as excp:
-                _LOGGER.exception("Config flow validation failed")
+            except ClientResponseError as excp:
+                _LOGGER.exception("Config flow validation failed (HTTP %s)", excp.status)
+                if excp.status == 401:
+                    base_error = "invalid_auth"
+                elif excp.status == 404:
+                    base_error = "invalid_device"
+                else:
+                    base_error = "cannot_connect"
                 # Keep the user on the same step with a useful base error.
                 return self.async_show_form(
                     step_id="device",
@@ -72,7 +79,21 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             vol.Required(CONF_ENTRY_SETTINGS_WOOFER_NUMBER, default=self.user_input.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER, False)): bool,
                         }
                     ),
-                    errors={"base": "fetch_failed"},
+                    errors={"base": base_error},
+                )
+            except Exception:
+                _LOGGER.exception("Config flow validation failed")
+                return self.async_show_form(
+                    step_id="device",
+                    data_schema=vol.Schema(
+                        {
+                            vol.Required(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES, default=self.user_input.get(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES, False)): bool,
+                            vol.Required(CONF_ENTRY_SETTINGS_EQ_SELECTOR, default=self.user_input.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR, False)): bool,
+                            vol.Required(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR, default=self.user_input.get(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR, False)): bool,
+                            vol.Required(CONF_ENTRY_SETTINGS_WOOFER_NUMBER, default=self.user_input.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER, False)): bool,
+                        }
+                    ),
+                    errors={"base": "cannot_connect"},
                 )
             return self.async_create_entry(title=DOMAIN, data=self.user_input)
 

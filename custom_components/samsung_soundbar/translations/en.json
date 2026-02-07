@@ -1,5 +1,10 @@
 {
     "config": {
+        "error": {
+            "cannot_connect": "Failed to connect to SmartThings. Please try again.",
+            "invalid_auth": "Invalid SmartThings token.",
+            "invalid_device": "Device ID not found in SmartThings for this token."
+        },
         "step": {
             "user": {
                 "data": {
