@@ -257,3 +257,49 @@ play_track_and_resume:
           min: 0
           max: 100
           step: 1
+
+execute_set:
+  name: Execute Set (Raw)
+  description: Power-user service to call execute with a raw href/property/value.
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    href:
+      name: Href
+      required: true
+      example: "/sec/networkaudio/woofer"
+      selector:
+        text:
+    property:
+      name: Property
+      required: true
+      example: "x.com.samsung.networkaudio.woofer"
+      selector:
+        text:
+    value:
+      name: Value (JSON or string)
+      required: true
+      example: "3"
+      selector:
+        text:
+
+ocf_post:
+  name: OCF Post (Raw)
+  description: Power-user service to call ocf.postOcfCommand with a raw href and JSON object.
+  target:
+    device:
+      integration: samsung_soundbar
+  fields:
+    href:
+      name: Href
+      required: true
+      example: "/sec/networkaudio/advancedaudio"
+      selector:
+        text:
+    value:
+      name: Value (JSON object)
+      required: true
+      example: "{\"key\":\"value\"}"
+      selector:
+        text:

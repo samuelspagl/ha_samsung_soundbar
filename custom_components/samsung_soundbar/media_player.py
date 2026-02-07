@@ -1,4 +1,5 @@
 import logging
+import json
 from typing import Any, Mapping
 
 from homeassistant.components.media_player import MediaPlayerEntity
@@ -136,6 +137,31 @@ def addServices():
             {vol.Required("uri"): str, vol.Optional("level"): vol.All(int, vol.Range(min=0, max=100))}
         ),
         SmartThingsSoundbarMediaPlayer.async_play_track_and_resume.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "execute_set",
+        cv.make_entity_service_schema(
+            {
+                vol.Required("href"): str,
+                vol.Required("property"): str,
+                # Accept JSON as string for UI friendliness; we parse it in code.
+                vol.Required("value"): str,
+            }
+        ),
+        SmartThingsSoundbarMediaPlayer.async_execute_set.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "ocf_post",
+        cv.make_entity_service_schema(
+            {
+                vol.Required("href"): str,
+                # JSON object as string
+                vol.Required("value"): str,
+            }
+        ),
+        SmartThingsSoundbarMediaPlayer.async_ocf_post.__name__,
     )
 
 
@@ -373,6 +399,26 @@ class SmartThingsSoundbarMediaPlayer(CoordinatorEntity[SoundbarCoordinator], Med
     async def async_play_track_and_resume(self, uri: str, level: int | None = None):
         args = [uri] if level is None else [uri, level]
         await self.device.device.command("main", "audioNotification", "playTrackAndResume", args)
+        await self.coordinator.async_request_refresh()
+
+    async def async_execute_set(self, href: str, property: str, value: str):
+        # Parse JSON if possible, otherwise treat as plain string.
+        parsed: Any
+        try:
+            parsed = json.loads(value)
+        except Exception:
+            parsed = value
+        await self.device.execute_set_raw(href, property, parsed)
+        await self.coordinator.async_request_refresh()
+
+    async def async_ocf_post(self, href: str, value: str):
+        try:
+            parsed = json.loads(value)
+        except Exception as exc:
+            raise ValueError("ocf_post value must be JSON object string") from exc
+        if not isinstance(parsed, dict):
+            raise ValueError("ocf_post value must be a JSON object")
+        await self.device.ocf_post(href, parsed)
         await self.coordinator.async_request_refresh()
 
     # This property can be uncommented for some extra_attributes

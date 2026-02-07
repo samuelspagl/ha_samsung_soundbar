@@ -520,6 +520,14 @@ class SoundbarDevice:
         argument = [href, {property: value}]
         assert await self.device.command("main", "execute", "execute", argument)
 
+    async def execute_set_raw(self, href: str, prop: str, value: Any):
+        """Power-user escape hatch: set any execute href/property/value."""
+        await self.set_custom_execution_data(href=href, property=prop, value=value)
+
+    async def ocf_post(self, href: str, value: dict[str, Any]):
+        """Send an OCF command (if supported by the device)."""
+        await self.device.command("main", "ocf", "postOcfCommand", [href, value])
+
     async def get_execute_status(self):
         url = f"https://api.smartthings.com/v1/devices/{self._device_id}/components/main/capabilities/execute/status"
         request_headers = {"Authorization": "Bearer " + self._api_key}
