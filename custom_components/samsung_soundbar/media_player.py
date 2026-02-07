@@ -35,17 +35,12 @@ DEFAULT_NAME = "SmartThings Soundbar"
 CONF_MAX_VOLUME = "max_volume"
 
 SUPPORT_SMARTTHINGS_SOUNDBAR = (
-    MediaPlayerEntityFeature.PAUSE
-    | MediaPlayerEntityFeature.VOLUME_STEP
+    MediaPlayerEntityFeature.VOLUME_STEP
     | MediaPlayerEntityFeature.VOLUME_MUTE
     | MediaPlayerEntityFeature.VOLUME_SET
     | MediaPlayerEntityFeature.SELECT_SOURCE
     | MediaPlayerEntityFeature.TURN_OFF
     | MediaPlayerEntityFeature.TURN_ON
-    | MediaPlayerEntityFeature.PLAY
-    | MediaPlayerEntityFeature.NEXT_TRACK
-    | MediaPlayerEntityFeature.PREVIOUS_TRACK
-    | MediaPlayerEntityFeature.STOP
     | MediaPlayerEntityFeature.SELECT_SOUND_MODE
 )
 
@@ -195,6 +190,15 @@ class SmartThingsSoundbarMediaPlayer(CoordinatorEntity[SoundbarCoordinator], Med
         # We can still select source via cycling if supportedInputSources exists.
         if not (self.source_list or []):
             features &= ~MediaPlayerEntityFeature.SELECT_SOURCE
+
+        # Only advertise playback controls if the underlying device supports them.
+        # Newer OCF soundbars often do not expose media playback capabilities.
+        if hasattr(self.device.device, "play"):
+            features |= MediaPlayerEntityFeature.PLAY
+        if hasattr(self.device.device, "pause"):
+            features |= MediaPlayerEntityFeature.PAUSE
+        if hasattr(self.device.device, "stop"):
+            features |= MediaPlayerEntityFeature.STOP
         return features
 
     @property

@@ -210,15 +210,29 @@ class SoundbarDevice:
 
     @property
     def state(self) -> str:
-        if self.device.status.switch:
-            if self.device.status.playback_status == "playing":
-                return "playing"
-            if self.device.status.playback_status == "paused":
-                return "paused"
-            else:
-                return "on"
-        else:
+        try:
+            is_on = bool(getattr(self.device.status, "switch"))
+        except Exception:
+            is_on = False
+
+        if not is_on:
             return "off"
+
+        # Optional playback status (not available on all models).
+        try:
+            pb = getattr(self.device.status, "playback_status", None)
+            if isinstance(pb, str) and pb:
+                if pb in ("playing", "paused"):
+                    return pb
+        except Exception:
+            pass
+
+        # Fallback to thingStatus (SamsungVD) if present.
+        ts = self._attr("status")
+        if isinstance(ts, str) and ts.lower() in ("playing", "paused"):
+            return ts.lower()
+
+        return "on"
 
     async def switch_off(self):
         await self.device.switch_off(True)
@@ -435,12 +449,18 @@ class SoundbarDevice:
             return attr.value
 
     async def media_play(self):
+        if not hasattr(self.device, "play"):
+            raise NotImplementedError("Play not supported by this device")
         await self.device.play(True)
 
     async def media_pause(self):
+        if not hasattr(self.device, "pause"):
+            raise NotImplementedError("Pause not supported by this device")
         await self.device.pause(True)
 
     async def media_stop(self):
+        if not hasattr(self.device, "stop"):
+            raise NotImplementedError("Stop not supported by this device")
         await self.device.stop(True)
 
     async def media_next_track(self):
