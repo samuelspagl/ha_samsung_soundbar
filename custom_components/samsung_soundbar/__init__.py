@@ -1,11 +1,12 @@
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import DOMAIN, HomeAssistant
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pysmartthings import SmartThings
 
 from .api_extension.SoundbarDevice import SoundbarDevice
+from .coordinator import SoundbarCoordinator
 from .const import (
     CONF_ENTRY_API_KEY,
     CONF_ENTRY_DEVICE_ID,
@@ -16,13 +17,11 @@ from .const import (
     CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR,
     CONF_ENTRY_SETTINGS_WOOFER_NUMBER,
     DOMAIN,
-    SUPPORTED_DOMAINS,
+    PLATFORMS,
 )
 from .models import DeviceConfig, SoundbarConfig
 
 _LOGGER = logging.getLogger(__name__)
-
-PLATFORMS = ["media_player", "switch", "image", "number", "select", "sensor"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -66,9 +65,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             enable_soundmode=entry.data.get(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR),
             enable_woofer=entry.data.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER),
         )
-        await soundbar_device.update()
+        coordinator = SoundbarCoordinator(hass, soundbar_device)
+        await coordinator.async_config_entry_first_refresh()
+
         domain_config.devices[entry.data.get(CONF_ENTRY_DEVICE_ID)] = DeviceConfig(
-            entry.data, soundbar_device
+            entry.data, soundbar_device, coordinator
         )
         _LOGGER.info(f"[{DOMAIN}] Successfully initialized new Soundbar device")
 

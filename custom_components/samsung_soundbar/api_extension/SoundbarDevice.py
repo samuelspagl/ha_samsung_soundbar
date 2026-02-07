@@ -56,6 +56,15 @@ class SoundbarDevice:
         self.__old_media_title = ""
 
         self.__max_volume = max_volume
+        self.__execute_status_supported: bool | None = None
+
+    def _attr(self, name: str):
+        """Best-effort attribute lookup from SmartThings status."""
+        try:
+            attr = self.device.status.attributes.get(name)
+        except Exception:
+            attr = None
+        return attr.value if attr is not None else None
 
     async def update(self):
         await self.device.status.refresh()
@@ -87,6 +96,8 @@ class SoundbarDevice:
                 )
 
     async def _update_soundmode(self):
+        if self.__execute_status_supported is False:
+            return
         await self.update_execution_data(["/sec/networkaudio/soundmode"])
         await asyncio.sleep(1)
         payload = await self.get_execute_status()
@@ -109,6 +120,8 @@ class SoundbarDevice:
         self.__active_soundmode = payload["x.com.samsung.networkaudio.soundmode"]
 
     async def _update_woofer(self):
+        if self.__execute_status_supported is False:
+            return
         await self.update_execution_data(["/sec/networkaudio/woofer"])
         await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
@@ -124,6 +137,8 @@ class SoundbarDevice:
         self.__woofer_connection = payload["x.com.samsung.networkaudio.connection"]
 
     async def _update_equalizer(self):
+        if self.__execute_status_supported is False:
+            return
         await self.update_execution_data(["/sec/networkaudio/eq"])
         await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
@@ -143,6 +158,8 @@ class SoundbarDevice:
         self.__eq_bands = payload["x.com.samsung.networkaudio.EQband"]
 
     async def _update_advanced_audio(self):
+        if self.__execute_status_supported is False:
+            return
         await self.update_execution_data(["/sec/networkaudio/advancedaudio"])
         await asyncio.sleep(0.1)
 
@@ -172,11 +189,12 @@ class SoundbarDevice:
 
     @property
     def model(self):
-        return self.device.status.ocf_model_number
+        # Many Samsung OCF devices expose the model in ocf.mnmo (ex: HW-Q990D).
+        return self.device.status.ocf_model_number or self._attr("mnmo")
 
     @property
     def firmware_version(self):
-        return self.device.status.ocf_firmware_version
+        return self.device.status.ocf_firmware_version or self._attr("mnfv")
 
     @property
     def device_id(self):
@@ -207,6 +225,10 @@ class SoundbarDevice:
         await self.device.switch_on(True)
 
     # ------------ VOLUME --------------
+
+    @property
+    def max_volume(self) -> int:
+        return self.__max_volume
 
     @property
     def volume_level(self) -> float:
@@ -261,16 +283,50 @@ class SoundbarDevice:
 
     @property
     def input_source(self):
-        if self.media_app_name in ("AirPlay", "Spotify"):
-            return "wifi"
-        return self.device.status.input_source
+        # This device exposes input source via samsungvd.audioInputSource.
+        src = self._attr("inputSource")
+        if src:
+            return src
+        # fallback (older models / pysmartthings property)
+        try:
+            return self.device.status.input_source
+        except Exception:
+            return None
 
     @property
     def supported_input_sources(self):
-        return self.device.status.supported_input_sources
+        sources = self._attr("supportedInputSources")
+        if sources:
+            return sources
+        try:
+            return self.device.status.supported_input_sources
+        except Exception:
+            return []
 
     async def select_source(self, source: str):
-        await self.device.set_input_source(source, True)
+        sources = list(self.supported_input_sources or [])
+        if not sources:
+            raise ValueError("No supported input sources reported by SmartThings")
+
+        current = self.input_source
+        if current == source:
+            return
+
+        if source not in sources:
+            raise ValueError(f"Unsupported source: {source}")
+
+        # The capability only supports 'next' cycling on some devices.
+        # Compute a minimal number of steps to reach the target.
+        try:
+            cur_idx = sources.index(current) if current in sources else 0
+        except Exception:
+            cur_idx = 0
+        tgt_idx = sources.index(source)
+        steps = (tgt_idx - cur_idx) % len(sources)
+        for _ in range(steps):
+            await self.device.command("main", "samsungvd.audioInputSource", "setNextInputSource")
+            await asyncio.sleep(0.6)
+        await self.device.status.refresh()
 
     # ------------- SOUND MODE --------------
     @property
@@ -393,10 +449,8 @@ class SoundbarDevice:
 
     @property
     def media_app_name(self):
-        detail_status = self.device.status.attributes.get("detailName", None)
-        if detail_status is not None:
-            return detail_status.value
-        return None
+        # Reported by samsungvd.soundFrom.detailName on newer models.
+        return self._attr("detailName")
 
     @property
     def media_coverart_updated(self) -> datetime.datetime:
@@ -451,14 +505,19 @@ class SoundbarDevice:
         dict_stuff = await resp.json()
         # Some devices return {"data":{"value": null}} or an error object here.
         if not isinstance(dict_stuff, dict) or "error" in dict_stuff:
+            self.__execute_status_supported = False
             return {}
         data = dict_stuff.get("data") or {}
         if not isinstance(data, dict):
+            self.__execute_status_supported = False
             return {}
         value = data.get("value")
         if not isinstance(value, dict):
+            # If we consistently see null here, stop trying execute/status to avoid rate limits.
+            self.__execute_status_supported = False
             return {}
         payload = value.get("payload")
+        self.__execute_status_supported = isinstance(payload, dict)
         return payload if isinstance(payload, dict) else {}
 
     async def get_song_title_artwork(self, artist: str, title: str) -> str:

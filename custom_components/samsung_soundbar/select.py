@@ -1,12 +1,10 @@
+from __future__ import annotations
+
 import logging
 
-from homeassistant.components.number import (
-    NumberEntity,
-    NumberEntityDescription,
-    NumberMode,
-)
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .const import (
@@ -22,168 +20,119 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     domain_data = hass.data[DOMAIN]
-    entities = []
+    entities: list[SelectEntity] = []
+
     for key in domain_data.devices:
         device_config: DeviceConfig = domain_data.devices[key]
         device = device_config.device
-        if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            if config_entry.data.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR):
-                entities.append(
-                    EqPresetSelectEntity(device, "eq_preset", "mdi:tune-vertical")
-                )
-            if config_entry.data.get(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR):
-                entities.append(
-                    SoundModeSelectEntity(
-                        device, "sound_mode_preset", "mdi:surround-sound"
-                    )
-                )
+        coordinator = device_config.coordinator
+        if device.device_id != config_entry.data.get(CONF_ENTRY_DEVICE_ID):
+            continue
 
-            entities.append(
-                InputSelectEntity(device, "input_preset", "mdi:video-input-hdmi")
-            )
+        entities.append(InputSourceSelectEntity(coordinator))
+
+        if config_entry.data.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR):
+            entities.append(EqPresetSelectEntity(coordinator))
+
+        if config_entry.data.get(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR):
+            entities.append(SoundModeSelectEntity(coordinator))
+
     async_add_entities(entities)
     return True
 
 
-class EqPresetSelectEntity(SelectEntity):
-    def __init__(
-        self,
-        device: SoundbarDevice,
-        append_unique_id: str,
-        icon_string: str,
-    ):
-        self.entity_id = f"number.{device.device_name}_{append_unique_id}"
-        self.entity_description = SelectEntityDescription(
-            key=append_unique_id,
-        )
-        self.__base_icon = icon_string
-        self.__device = device
-        self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
+class _BaseSelect(CoordinatorEntity, SelectEntity):
+    def __init__(self, coordinator, desc: SelectEntityDescription, key: str, name: str, icon: str):
+        super().__init__(coordinator)
+        dev: SoundbarDevice = coordinator.data
+
+        self.entity_description = desc
+        self._attr_unique_id = f"{dev.device_id}_{key}"
+        self._attr_name = name
+        self._attr_icon = icon
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.__device.device_id)},
-            name=self.__device.device_name,
-            manufacturer=self.__device.manufacturer,
-            model=self.__device.model,
-            sw_version=self.__device.firmware_version,
+            identifiers={(DOMAIN, dev.device_id)},
+            name=dev.device_name,
+            manufacturer=dev.manufacturer,
+            model=dev.model,
+            sw_version=dev.firmware_version,
         )
-        self.__append_unique_id = append_unique_id
 
-        self._attr_options = self.__device.supported_equalizer_presets
 
-    # ---------- GENERAL ---------------
-
-    @property
-    def name(self):
-        return self.__append_unique_id
-
-    @property
-    def icon(self) -> str | None:
-        return self.__base_icon
-
-    # ------ STATE FUNCTIONS --------
+class InputSourceSelectEntity(_BaseSelect):
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator,
+            SelectEntityDescription(key="input_source"),
+            key="select_input_source",
+            name="Input Source",
+            icon="mdi:video-input-hdmi",
+        )
 
     @property
     def current_option(self) -> str | None:
-        """Get the current status of the select entity from device_status."""
-        return self.__device.active_equalizer_preset
+        dev: SoundbarDevice = self.coordinator.data
+        return dev.input_source
+
+    @property
+    def options(self) -> list[str]:
+        dev: SoundbarDevice = self.coordinator.data
+        return list(dev.supported_input_sources or [])
 
     async def async_select_option(self, option: str) -> None:
-        """Set the option."""
+        dev: SoundbarDevice = self.coordinator.data
+        await dev.select_source(option)
+        await self.coordinator.async_request_refresh()
 
-        await self.__device.set_equalizer_preset(option)
 
-
-class SoundModeSelectEntity(SelectEntity):
-    def __init__(
-        self,
-        device: SoundbarDevice,
-        append_unique_id: str,
-        icon_string: str,
-    ):
-        self.entity_id = f"number.{device.device_name}_{append_unique_id}"
-        self.entity_description = SelectEntityDescription(
-            key=append_unique_id,
+class EqPresetSelectEntity(_BaseSelect):
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator,
+            SelectEntityDescription(key="eq_preset"),
+            key="select_eq_preset",
+            name="EQ Preset",
+            icon="mdi:tune-vertical",
         )
-        self.__base_icon = icon_string
-        self.__device = device
-        self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.__device.device_id)},
-            name=self.__device.device_name,
-            manufacturer=self.__device.manufacturer,
-            model=self.__device.model,
-            sw_version=self.__device.firmware_version,
-        )
-        self.__append_unique_id = append_unique_id
-
-        self._attr_options = self.__device.supported_soundmodes
-
-    # ---------- GENERAL ---------------
-
-    @property
-    def name(self):
-        return self.__append_unique_id
-
-    @property
-    def icon(self) -> str | None:
-        return self.__base_icon
-
-    # ------ STATE FUNCTIONS --------
 
     @property
     def current_option(self) -> str | None:
-        """Get the current status of the select entity from device_status."""
-        return self.__device.sound_mode
+        dev: SoundbarDevice = self.coordinator.data
+        return dev.active_equalizer_preset
+
+    @property
+    def options(self) -> list[str]:
+        dev: SoundbarDevice = self.coordinator.data
+        return list(dev.supported_equalizer_presets or [])
 
     async def async_select_option(self, option: str) -> None:
-        """Set the option."""
+        dev: SoundbarDevice = self.coordinator.data
+        await dev.set_equalizer_preset(option)
+        await self.coordinator.async_request_refresh()
 
-        await self.__device.select_sound_mode(option)
 
-
-class InputSelectEntity(SelectEntity):
-    def __init__(
-        self,
-        device: SoundbarDevice,
-        append_unique_id: str,
-        icon_string: str,
-    ):
-        self.entity_id = f"number.{device.device_name}_{append_unique_id}"
-        self.entity_description = SelectEntityDescription(
-            key=append_unique_id,
+class SoundModeSelectEntity(_BaseSelect):
+    def __init__(self, coordinator):
+        super().__init__(
+            coordinator,
+            SelectEntityDescription(key="sound_mode"),
+            key="select_sound_mode",
+            name="Sound Mode",
+            icon="mdi:surround-sound",
         )
-        self.__base_icon = icon_string
-        self.__device = device
-        self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.__device.device_id)},
-            name=self.__device.device_name,
-            manufacturer=self.__device.manufacturer,
-            model=self.__device.model,
-            sw_version=self.__device.firmware_version,
-        )
-        self.__append_unique_id = append_unique_id
-
-        self._attr_options = self.__device.supported_input_sources
-
-    # ---------- GENERAL ---------------
-
-    @property
-    def name(self):
-        return self.__append_unique_id
-
-    @property
-    def icon(self) -> str | None:
-        return self.__base_icon
-
-    # ------ STATE FUNCTIONS --------
 
     @property
     def current_option(self) -> str | None:
-        """Get the current status of the select entity from device_status."""
-        return self.__device.input_source
+        dev: SoundbarDevice = self.coordinator.data
+        return dev.sound_mode
+
+    @property
+    def options(self) -> list[str]:
+        dev: SoundbarDevice = self.coordinator.data
+        return list(dev.supported_soundmodes or [])
 
     async def async_select_option(self, option: str) -> None:
-        """Set the option."""
+        dev: SoundbarDevice = self.coordinator.data
+        await dev.select_sound_mode(option)
+        await self.coordinator.async_request_refresh()
 
-        await self.__device.select_source(option)
