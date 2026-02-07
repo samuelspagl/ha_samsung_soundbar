@@ -91,17 +91,16 @@ class SoundbarDevice:
         await asyncio.sleep(1)
         payload = await self.get_execute_status()
         retry = 0
+        # execute/status is rate limited and may be empty/null for some devices (e.g. newer OCF models).
         while (
-                "x.com.samsung.networkaudio.supportedSoundmode" not in payload
-                and retry < 10
+            "x.com.samsung.networkaudio.supportedSoundmode" not in payload
+            and retry < 3
         ):
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
             payload = await self.get_execute_status()
             retry += 1
-        if retry == 10:
-            log.error(
-                f"[{DOMAIN}] Error: _update_soundmode exceeded a retry counter of 10"
-            )
+        if "x.com.samsung.networkaudio.supportedSoundmode" not in payload:
+            log.debug(f"[{DOMAIN}] execute/status did not return soundmode payload (device may not support it).")
             return
 
         self.__supported_soundmodes = payload[
@@ -114,14 +113,12 @@ class SoundbarDevice:
         await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
         retry = 0
-        while "x.com.samsung.networkaudio.woofer" not in payload and retry < 10:
-            await asyncio.sleep(0.2)
+        while "x.com.samsung.networkaudio.woofer" not in payload and retry < 3:
+            await asyncio.sleep(1)
             payload = await self.get_execute_status()
             retry += 1
-        if retry == 10:
-            log.error(
-                f"[{DOMAIN}] Error: _update_woofer exceeded a retry counter of 10"
-            )
+        if "x.com.samsung.networkaudio.woofer" not in payload:
+            log.debug(f"[{DOMAIN}] execute/status did not return woofer payload (device may not support it).")
             return
         self.__woofer_level = payload["x.com.samsung.networkaudio.woofer"]
         self.__woofer_connection = payload["x.com.samsung.networkaudio.connection"]
@@ -131,14 +128,12 @@ class SoundbarDevice:
         await asyncio.sleep(0.1)
         payload = await self.get_execute_status()
         retry = 0
-        while "x.com.samsung.networkaudio.EQname" not in payload and retry < 10:
-            await asyncio.sleep(0.2)
+        while "x.com.samsung.networkaudio.EQname" not in payload and retry < 3:
+            await asyncio.sleep(1)
             payload = await self.get_execute_status()
             retry += 1
-        if retry == 10:
-            log.error(
-                f"[{DOMAIN}] Error: _update_equalizer exceeded a retry counter of 10"
-            )
+        if "x.com.samsung.networkaudio.EQname" not in payload:
+            log.debug(f"[{DOMAIN}] execute/status did not return equalizer payload (device may not support it).")
             return
         self.__active_eq_preset = payload["x.com.samsung.networkaudio.EQname"]
         self.__supported_eq_presets = payload[
@@ -153,14 +148,12 @@ class SoundbarDevice:
 
         payload = await self.get_execute_status()
         retry = 0
-        while "x.com.samsung.networkaudio.nightmode" not in payload and retry < 10:
-            await asyncio.sleep(0.2)
+        while "x.com.samsung.networkaudio.nightmode" not in payload and retry < 3:
+            await asyncio.sleep(1)
             payload = await self.get_execute_status()
             retry += 1
-        if retry == 10:
-            log.error(
-                f"[{DOMAIN}] Error: _update_advanced_audio exceeded a retry counter of 10"
-            )
+        if "x.com.samsung.networkaudio.nightmode" not in payload:
+            log.debug(f"[{DOMAIN}] execute/status did not return advanced-audio payload (device may not support it).")
             return
 
         self.__night_mode = payload["x.com.samsung.networkaudio.nightmode"]
@@ -456,7 +449,17 @@ class SoundbarDevice:
         request_headers = {"Authorization": "Bearer " + self._api_key}
         resp = await self.__session.get(url, headers=request_headers)
         dict_stuff = await resp.json()
-        return dict_stuff["data"]["value"]["payload"]
+        # Some devices return {"data":{"value": null}} or an error object here.
+        if not isinstance(dict_stuff, dict) or "error" in dict_stuff:
+            return {}
+        data = dict_stuff.get("data") or {}
+        if not isinstance(data, dict):
+            return {}
+        value = data.get("value")
+        if not isinstance(value, dict):
+            return {}
+        payload = value.get("payload")
+        return payload if isinstance(payload, dict) else {}
 
     async def get_song_title_artwork(self, artist: str, title: str) -> str:
         """
