@@ -5,7 +5,6 @@ import pysmartthings
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from pysmartthings import APIResponseError
 from voluptuous import All, Range
 
 from .const import (
@@ -26,8 +25,9 @@ _LOGGER = logging.getLogger(__name__)
 async def validate_input(api, device_id: str):
     try:
         return await api.device(device_id)
-    except APIResponseError as excp:
-        _LOGGER.error("[Samsung Soundbar] ERROR: %s", str(excp))
+    except Exception as excp:
+        # pysmartthings exception classes changed across versions; avoid hard dependency.
+        _LOGGER.error("[Samsung Soundbar] ERROR validating device id: %s", str(excp))
         raise ValueError
 
 
