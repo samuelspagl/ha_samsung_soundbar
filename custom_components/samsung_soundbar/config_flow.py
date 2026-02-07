@@ -75,10 +75,10 @@ class ExampleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="device",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES): bool,
-                    vol.Required(CONF_ENTRY_SETTINGS_EQ_SELECTOR): bool,
-                    vol.Required(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR): bool,
-                    vol.Required(CONF_ENTRY_SETTINGS_WOOFER_NUMBER): bool,
+                    vol.Required(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES, default=False): bool,
+                    vol.Required(CONF_ENTRY_SETTINGS_EQ_SELECTOR, default=False): bool,
+                    vol.Required(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR, default=False): bool,
+                    vol.Required(CONF_ENTRY_SETTINGS_WOOFER_NUMBER, default=False): bool,
                 }
             ),
         )
