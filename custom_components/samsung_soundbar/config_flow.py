@@ -31,7 +31,7 @@ async def validate_input(api, device_id: str):
         raise ValueError
 
 
-class ExampleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         if user_input is not None:
             self.user_input = user_input

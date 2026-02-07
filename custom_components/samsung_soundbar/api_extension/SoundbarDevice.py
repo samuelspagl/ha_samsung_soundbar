@@ -4,7 +4,7 @@ import json
 import logging
 from urllib.parse import quote
 
-from pysmartthings import DeviceEntity
+from typing import Any
 
 from .const import SpeakerIdentifier, RearSpeakerMode
 from ..const import DOMAIN
@@ -15,8 +15,9 @@ log = logging.getLogger(__name__)
 class SoundbarDevice:
     def __init__(
             self,
-            device: DeviceEntity,
+            device: Any,
             session,
+            api_key: str,
             max_volume: int,
             device_name: str,
             enable_eq: bool = False,
@@ -26,7 +27,8 @@ class SoundbarDevice:
     ):
         self.device = device
         self._device_id = self.device.device_id
-        self._api_key = self.device._api.token
+        # Don't depend on private pysmartthings internals; pass the token from the config entry.
+        self._api_key = api_key
         self.__session = session
         self.__device_name = device_name
 

@@ -56,6 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         soundbar_device = SoundbarDevice(
             smart_things_device,
             session,
+            entry.data.get(CONF_ENTRY_API_KEY),
             entry.data.get(CONF_ENTRY_MAX_VOLUME),
             entry.data.get(CONF_ENTRY_DEVICE_NAME),
             enable_eq=entry.data.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR),
