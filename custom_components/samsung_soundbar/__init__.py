@@ -28,9 +28,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # store shell object
 
     _LOGGER.info(f"[{DOMAIN}] Starting to setup a ConfigEntry")
-    _LOGGER.debug(
-        f"[{DOMAIN}] Setting up ConfigEntry with the following data: {entry.data}"
-    )
+    # Never log secrets (SmartThings personal access token lives in entry.data).
+    if _LOGGER.isEnabledFor(logging.DEBUG):
+        redacted = dict(entry.data)
+        if CONF_ENTRY_API_KEY in redacted:
+            redacted[CONF_ENTRY_API_KEY] = "***REDACTED***"
+        _LOGGER.debug(f"[{DOMAIN}] Setting up ConfigEntry with the following data: {redacted}")
     if not DOMAIN in hass.data:
         _LOGGER.debug(f"[{DOMAIN}] Domain not found in hass.data setting default")
         hass.data[DOMAIN] = SoundbarConfig(

@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 .DS_store
+.DS_Store
+._*
 
 config
 .vscode

@@ -48,6 +48,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_device(self, user_input: dict[str, Any] | None = None):
+        # `fetch_failed` in the UI is often caused by exceptions inside the flow.
+        # Be defensive: flows can be resumed and `self.user_input` might not exist.
+        if not hasattr(self, "user_input") or self.user_input is None:
+            self.user_input = {}
+
         if user_input is not None:
             self.user_input.update(user_input)
 
@@ -95,7 +100,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ),
                     errors={"base": "cannot_connect"},
                 )
-            return self.async_create_entry(title=DOMAIN, data=self.user_input)
+            # Use the device label/name as the entry title if possible (nicer UI).
+            title = None
+            if isinstance(device, dict):
+                title = device.get("label") or device.get("name")
+            return self.async_create_entry(title=title or DOMAIN, data=self.user_input)
 
         return self.async_show_form(
             step_id="device",
