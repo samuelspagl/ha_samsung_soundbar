@@ -79,6 +79,42 @@ jobs:
           echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
           echo "release_name=${release_name}" >> "$GITHUB_OUTPUT"
 
+      # Authorization policy:
+      # - Users who invoke this workflow (manual dispatch or /deploy comments) must have
+      #   at least write-level repository permission.
+      # - Allowed levels are: write, maintain, admin.
+      # - We prefer github.triggering_actor when available so workflow re-runs are checked
+      #   against the user who clicked re-run instead of the original actor.
+      # This gate blocks all downstream checkout/tag/release steps when unauthorized.
+      - name: "Authorize deployment actor"
+        id: "authorize"
+        uses: "actions/github-script@v7"
+        env:
+          REQUESTED_BY: "${{ github.triggering_actor != '' && github.triggering_actor || github.actor }}"
+        with:
+          script: |
+            const allowedPermissions = new Set(['write', 'maintain', 'admin']);
+            const requestedBy = process.env.REQUESTED_BY;
+
+            const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: requestedBy,
+            });
+
+            const permission = data.permission;
+            core.info(`Deployment requested by '${requestedBy}' with '${permission}' permission.`);
+
+            if (!allowedPermissions.has(permission)) {
+              core.setFailed(
+                `Deployment denied for @${requestedBy}: repository permission '${permission}' is below required level. ` +
+                `Allowed permissions: ${Array.from(allowedPermissions).join(', ')}.`
+              );
+              return;
+            }
+
+            core.info(`Authorization gate passed for @${requestedBy}.`);
+
       - name: "Checkout PR merge commit"
         uses: "actions/checkout@v4.1.0"
         with:
