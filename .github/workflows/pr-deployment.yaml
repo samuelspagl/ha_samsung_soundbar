@@ -33,11 +33,11 @@ jobs:
       (
         github.event_name == 'issue_comment' &&
         github.event.issue.pull_request &&
-        startsWith(github.event.comment.body, '/deploy ')
+        startsWith(github.event.comment.body, '/deploy')
       ) ||
       (
         github.event_name == 'pull_request_review_comment' &&
-        startsWith(github.event.comment.body, '/deploy ')
+        startsWith(github.event.comment.body, '/deploy')
       )
     runs-on: "ubuntu-latest"
     permissions:
@@ -62,26 +62,16 @@ jobs:
             tag_name="${INPUT_TAG_NAME}"
             release_name="${INPUT_RELEASE_NAME}"
           elif [[ "${EVENT_NAME}" == "pull_request_review_comment" ]]; then
-            # Command format: /deploy <tag_name> [release name]
-            cmd="${COMMENT_BODY}"
-            rest="${cmd#/deploy }"
-            tag_name="${rest%% *}"
-            if [[ "${rest}" == "${tag_name}" ]]; then
-              release_name=""
-            else
-              release_name="${rest#* }"
-            fi
+            # Command format: /deploy [release name]
+            tag_name=""
+            release_name="${COMMENT_BODY#/deploy}"
+            release_name="${release_name# }"
             pr_number="${REVIEW_COMMENT_PR_NUMBER}"
           else
-            # Command format: /deploy <tag_name> [release name]
-            cmd="${COMMENT_BODY}"
-            rest="${cmd#/deploy }"
-            tag_name="${rest%% *}"
-            if [[ "${rest}" == "${tag_name}" ]]; then
-              release_name=""
-            else
-              release_name="${rest#* }"
-            fi
+            # Command format: /deploy [release name]
+            tag_name=""
+            release_name="${COMMENT_BODY#/deploy}"
+            release_name="${release_name# }"
             pr_number="${COMMENT_PR_NUMBER}"
           fi
 
@@ -95,29 +85,46 @@ jobs:
           ref: "refs/pull/${{ steps.resolve.outputs.pr_number }}/merge"
           fetch-depth: 0
 
+      - name: "Determine effective tag"
+        id: "effective"
+        shell: "bash"
+        env:
+          RESOLVED_TAG: "${{ steps.resolve.outputs.tag_name }}"
+          PR_NUMBER: "${{ steps.resolve.outputs.pr_number }}"
+          RUN_ID: "${{ github.run_id }}"
+        run: |
+          if [[ -n "${RESOLVED_TAG}" ]]; then
+            tag_name="${RESOLVED_TAG}"
+          else
+            version="$(python -c 'import json; print(json.load(open("custom_components/samsung_soundbar/manifest.json"))["version"])')"
+            tag_name="v${version}-pr${PR_NUMBER}-run${RUN_ID}"
+          fi
+
+          echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
+
       - name: "Validate tag format"
         shell: "bash"
         run: |
-          if [[ ! "${{ steps.resolve.outputs.tag_name }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Tag '${{ steps.resolve.outputs.tag_name }}' does not look like a semantic version." >&2
+          if [[ ! "${{ steps.effective.outputs.tag_name }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Tag '${{ steps.effective.outputs.tag_name }}' does not look like a semantic version." >&2
             exit 1
           fi
 
       - name: "Create pre-release"
         uses: "softprops/action-gh-release@v2"
         with:
-          tag_name: "${{ steps.resolve.outputs.tag_name }}"
+          tag_name: "${{ steps.effective.outputs.tag_name }}"
           target_commitish: "${{ github.sha }}"
           prerelease: true
           generate_release_notes: true
-          name: "${{ steps.resolve.outputs.release_name != '' && steps.resolve.outputs.release_name || steps.resolve.outputs.tag_name }}"
+          name: "${{ steps.resolve.outputs.release_name != '' && steps.resolve.outputs.release_name || steps.effective.outputs.tag_name }}"
           body: |
             Automated pre-release from PR #${{ steps.resolve.outputs.pr_number }}.
 
       - name: "Comment on PR with release link"
         uses: "actions/github-script@v7"
         env:
-          RELEASE_URL: "https://github.com/${{ github.repository }}/releases/tag/${{ steps.resolve.outputs.tag_name }}"
+          RELEASE_URL: "https://github.com/${{ github.repository }}/releases/tag/${{ steps.effective.outputs.tag_name }}"
         with:
           script: |
             const prNumber = Number('${{ steps.resolve.outputs.pr_number }}');
