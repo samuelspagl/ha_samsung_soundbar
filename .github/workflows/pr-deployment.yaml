@@ -1,0 +1,69 @@
+name: "PR Deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull Request Number"
+        required: true
+        type: number
+      tag_name:
+        description: "Tag/Version (z. B. v1.2.3-rc1)"
+        required: true
+        type: string
+      release_name:
+        description: "Release-Name"
+        required: false
+        default: ""
+        type: string
+
+permissions: {}
+
+jobs:
+  deploy:
+    name: "Create pre-release from PR"
+    runs-on: "ubuntu-latest"
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: "Checkout PR merge commit"
+        uses: "actions/checkout@v4.1.0"
+        with:
+          ref: "refs/pull/${{ inputs.pr_number }}/merge"
+          fetch-depth: 0
+
+      - name: "Validate tag format"
+        shell: "bash"
+        run: |
+          if [[ ! "${{ inputs.tag_name }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Tag '${{ inputs.tag_name }}' does not look like a semantic version." >&2
+            exit 1
+          fi
+
+      - name: "Create pre-release"
+        uses: "softprops/action-gh-release@v2"
+        with:
+          tag_name: "${{ inputs.tag_name }}"
+          target_commitish: "${{ github.sha }}"
+          prerelease: true
+          generate_release_notes: true
+          name: "${{ inputs.release_name != '' && inputs.release_name || inputs.tag_name }}"
+          body: |
+            Automated pre-release from PR #${{ inputs.pr_number }}.
+
+      - name: "Comment on PR with release link"
+        uses: "actions/github-script@v7"
+        env:
+          RELEASE_URL: "https://github.com/${{ github.repository }}/releases/tag/${{ inputs.tag_name }}"
+        with:
+          script: |
+            const prNumber = Number('${{ inputs.pr_number }}');
+            const releaseUrl = process.env.RELEASE_URL;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: `🚀 Pre-release erstellt: ${releaseUrl}`,
+            });
