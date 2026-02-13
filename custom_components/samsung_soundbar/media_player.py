@@ -1,10 +1,17 @@
 import logging
 from typing import Any, Mapping
 
-from homeassistant.components.media_player import (
-    DEVICE_CLASS_SPEAKER,
-    MediaPlayerEntity,
-)
+
+from homeassistant.components.media_player import MediaPlayerEntity
+
+
+
+try:
+    from homeassistant.components.media_player import DEVICE_CLASS_SPEAKER
+except Exception:
+    
+    DEVICE_CLASS_SPEAKER = "speaker"
+
 from homeassistant.components.media_player.const import MediaPlayerEntityFeature
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
@@ -103,8 +110,6 @@ def addServices():
         cv.make_entity_service_schema({vol.Required("enabled"): bool}),
         SmartThingsSoundbarMediaPlayer.async_set_space_fit_sound.__name__,
     )
-
-
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
