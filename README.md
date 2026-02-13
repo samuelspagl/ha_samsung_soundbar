@@ -2,6 +2,9 @@
 
 Welcome to YASSI, the Home Assistant integration designed to bring comprehensive control over your Samsung Soundbar into your smart home ecosystem.
 
+> [!TIP]
+> Looking for a quick sanity check after setup? Try toggling **night mode** once from Home Assistant to confirm commands are reaching your soundbar.
+
 > [!NOTE]
 > Please use service calls for setting the attribute of a custom capability instead of the entity. (See #43 for more information)
 
