@@ -157,6 +157,18 @@ jobs:
           body: |
             Automated pre-release from PR #${{ steps.resolve.outputs.pr_number }}.
 
+      - name: "Package integration"
+        shell: "bash"
+        run: |
+          cd "${{ github.workspace }}/custom_components/samsung_soundbar"
+          zip -r samsung_soundbar.zip ./
+
+      - name: "Attach integration package to pre-release"
+        uses: "softprops/action-gh-release@v2"
+        with:
+          tag_name: "${{ steps.effective.outputs.tag_name }}"
+          files: "${{ github.workspace }}/custom_components/samsung_soundbar/samsung_soundbar.zip"
+
       - name: "Comment on PR with release link"
         uses: "actions/github-script@v7"
         env:
