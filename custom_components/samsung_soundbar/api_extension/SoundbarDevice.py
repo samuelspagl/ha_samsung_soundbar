@@ -117,6 +117,7 @@ class SoundbarDevice:
         )
 
         # Cache fields that we expose as properties
+        self._update_media_metadata()
         if self.__enable_soundmode:
             await self._update_soundmode()
         if self.__enable_advanced_audio:
@@ -244,6 +245,50 @@ class SoundbarDevice:
             if isinstance(self._status, dict)
             else {}
         )
+
+    def _update_media_metadata(self) -> None:
+        """Best-effort extraction of title/artist from SmartThings status payload.
+
+        Different models/firmware expose this data in different capabilities and
+        shapes (dict or JSON string). Keep this permissive and non-fatal.
+        """
+        track = (
+            self._attr("audioTrackData")
+            or self._attr("musicTrack")
+            or self._attr("trackData")
+        )
+
+        title: str | None = None
+        artist: str | None = None
+
+        if isinstance(track, str):
+            try:
+                parsed = json.loads(track)
+            except Exception:
+                parsed = None
+            if isinstance(parsed, dict):
+                track = parsed
+
+        if isinstance(track, dict):
+            raw_title = track.get("title") or track.get("trackTitle") or track.get("name")
+            raw_artist = track.get("artist") or track.get("artistName")
+            if isinstance(raw_title, str) and raw_title.strip():
+                title = raw_title.strip()
+            if isinstance(raw_artist, str) and raw_artist.strip():
+                artist = raw_artist.strip()
+
+        # Some payloads expose title/artist as separate attributes.
+        if title is None:
+            raw_title = self._attr("title")
+            if isinstance(raw_title, str) and raw_title.strip():
+                title = raw_title.strip()
+        if artist is None:
+            raw_artist = self._attr("artist")
+            if isinstance(raw_artist, str) and raw_artist.strip():
+                artist = raw_artist.strip()
+
+        self.__media_title = title
+        self.__media_artist = artist
 
     # ------------ Media metadata (limited) ------------
 
