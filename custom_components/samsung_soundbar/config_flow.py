@@ -13,7 +13,6 @@ from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from pysmartthings import APIResponseError
 from voluptuous import All, Range
 
 from .const import (
@@ -48,7 +47,7 @@ async def validate_input(api: pysmartthings.SmartThings, device_id: str):
     """Validate that the selected device exists and can be loaded."""
     try:
         return await api.get_device(device_id)
-    except APIResponseError as exc:
+    except Exception as exc:  # pragma: no cover - runtime API errors
         _LOGGER.error("[Samsung Soundbar] ERROR: %s", str(exc))
         raise ValueError from exc
 
