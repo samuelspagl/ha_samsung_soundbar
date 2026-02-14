@@ -12,7 +12,7 @@
   "requirements": [
     "pysmartthings==3.5.2"
   ],
-  "version": "0.4.0",
+  "version": "0.6.0",
   "dependencies": [
     "application_credentials"
   ]
