@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import logging
+from typing import Awaitable, Callable
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .const import (
@@ -16,98 +20,95 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     domain_data = hass.data[DOMAIN]
+    entities: list[SwitchEntity] = []
 
-    entities = []
     for key in domain_data.devices:
         device_config: DeviceConfig = domain_data.devices[key]
         device = device_config.device
-        if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            if config_entry.data.get(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES):
-                entities.append(
-                    SoundbarSwitchAdvancedAudio(
-                        device,
-                        "nightmode",
-                        lambda: device.night_mode,
-                        device.set_night_mode,
-                        device.set_night_mode,
-                        "mdi:weather-night",
-                    )
-                )
-                entities.append(
-                    SoundbarSwitchAdvancedAudio(
-                        device,
-                        "bassmode",
-                        lambda: device.bass_mode,
-                        device.set_bass_mode,
-                        device.set_bass_mode,
-                        "mdi:speaker-wireless",
-                    )
-                )
-                entities.append(
-                    SoundbarSwitchAdvancedAudio(
-                        device,
-                        "voice_amplifier",
-                        lambda: device.voice_amplifier,
-                        device.set_voice_amplifier,
-                        device.set_voice_amplifier,
-                        "mdi:account-voice",
-                    )
-                )
+        coordinator = device_config.coordinator
+
+        if device.device_id != config_entry.data.get(CONF_ENTRY_DEVICE_ID):
+            continue
+
+        if config_entry.data.get(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES):
+            entities.extend(
+                [
+                    SoundbarBoolSwitch(
+                        coordinator,
+                        key="night_mode",
+                        name="Night Mode",
+                        icon="mdi:weather-night",
+                        getter=lambda d: d.night_mode,
+                        setter=lambda d, v: d.set_night_mode(v),
+                    ),
+                    SoundbarBoolSwitch(
+                        coordinator,
+                        key="bass_boost",
+                        name="Bass Boost",
+                        icon="mdi:speaker-wireless",
+                        getter=lambda d: d.bass_mode,
+                        setter=lambda d, v: d.set_bass_mode(v),
+                    ),
+                    SoundbarBoolSwitch(
+                        coordinator,
+                        key="voice_amplifier",
+                        name="Voice Amplifier",
+                        icon="mdi:account-voice",
+                        getter=lambda d: d.voice_amplifier,
+                        setter=lambda d, v: d.set_voice_amplifier(v),
+                    ),
+                ]
+            )
+
     async_add_entities(entities)
     return True
 
 
-class SoundbarSwitchAdvancedAudio(SwitchEntity):
+class SoundbarBoolSwitch(CoordinatorEntity, SwitchEntity):
     def __init__(
         self,
-        device: SoundbarDevice,
-        append_unique_id: str,
-        state_function,
-        on_function,
-        off_function,
-        icon_string: str = "mdi:toggle-switch-variant",
-    ):
-        self.entity_id = f"switch.{device.device_name}_{append_unique_id}"
+        coordinator,
+        *,
+        key: str,
+        name: str,
+        icon: str,
+        getter: Callable[[SoundbarDevice], bool],
+        setter: Callable[[SoundbarDevice, bool], Awaitable[None]],
+    ) -> None:
+        super().__init__(coordinator)
+        self._key = key
+        self._getter = getter
+        self._setter = setter
 
-        self.__device = device
-        self._name = f"{self.__device.device_name} {append_unique_id}"
-        self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
-        self.__base_icon = icon_string
+        dev: SoundbarDevice = coordinator.data
+        self._attr_unique_id = f"{dev.device_id}_{key}"
+        self._attr_name = name
+        self._attr_icon = icon
+        # For newer models execute/status may be unavailable, so treat as assumed state.
+        self._attr_assumed_state = True
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.__device.device_id)},
-            name=self.__device.device_name,
-            manufacturer=self.__device.manufacturer,
-            model=self.__device.model,
-            sw_version=self.__device.firmware_version,
+            identifiers={(DOMAIN, dev.device_id)},
+            name=dev.device_name,
+            manufacturer=dev.manufacturer,
+            model=dev.model,
+            sw_version=dev.firmware_version,
         )
 
-        self.__state_function = state_function
-        self.__state = False
-        self.__on_function = on_function
-        self.__off_function = off_function
-
-    # ---------- GENERAL ---------------
-
     @property
-    def name(self):
-        return self._name
+    def is_on(self) -> bool | None:
+        dev: SoundbarDevice = self.coordinator.data
+        try:
+            return bool(self._getter(dev))
+        except Exception:
+            return None
 
-    def update(self):
-        self.__state = self.__state_function()
+    async def async_turn_on(self, **kwargs):
+        dev: SoundbarDevice = self.coordinator.data
+        await self._setter(dev, True)
+        await self.coordinator.async_request_refresh()
 
-    @property
-    def icon(self) -> str | None:
-        return self.__base_icon
+    async def async_turn_off(self, **kwargs):
+        dev: SoundbarDevice = self.coordinator.data
+        await self._setter(dev, False)
+        await self.coordinator.async_request_refresh()
 
-    # ------ STATE FUNCTIONS --------
-    @property
-    def state(self):
-        return "on" if self.__state else "off"
-
-    async def async_turn_off(self):
-        await self.__off_function(False)
-        self.__state = "off"
-
-    async def async_turn_on(self):
-        await self.__on_function(True)
-        self.__state = "on"

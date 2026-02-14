@@ -24,4 +24,4 @@ SELECT = SELECT_DOMAIN
 SUPPORTED_DOMAINS = ["media_player", "switch"]
 
 
-PLATFORMS = [SWITCH, MEDIA_PLAYER, SELECT, BUTTON]
+PLATFORMS = ["media_player", "sensor", "select", "button", "switch", "number", "image"]

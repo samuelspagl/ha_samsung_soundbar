@@ -1,15 +1,22 @@
 import logging
+import json
 from typing import Any, Mapping
 
-from homeassistant.components.media_player import (
-    DEVICE_CLASS_SPEAKER,
-    MediaPlayerEntity,
-)
+from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.components.media_player.const import MediaPlayerEntityFeature
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers import config_validation as cv, entity_platform, selector
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 import voluptuous as vol
+
+# NOTE:
+# Home Assistant removed DEVICE_CLASS_SPEAKER from newer versions, which caused an
+# ImportError and prevented the integration from loading. Keep compatibility with
+# both old and new HA versions by falling back to the canonical string value.
+try:
+    from homeassistant.components.media_player import DEVICE_CLASS_SPEAKER
+except ImportError:  # pragma: no cover - depends on HA version
+    DEVICE_CLASS_SPEAKER = "speaker"
 
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .api_extension.const import SpeakerIdentifier, RearSpeakerMode
@@ -21,6 +28,7 @@ from .const import (
     DOMAIN,
 )
 from .models import DeviceConfig
+from .coordinator import SoundbarCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,17 +36,12 @@ DEFAULT_NAME = "SmartThings Soundbar"
 CONF_MAX_VOLUME = "max_volume"
 
 SUPPORT_SMARTTHINGS_SOUNDBAR = (
-    MediaPlayerEntityFeature.PAUSE
-    | MediaPlayerEntityFeature.VOLUME_STEP
+    MediaPlayerEntityFeature.VOLUME_STEP
     | MediaPlayerEntityFeature.VOLUME_MUTE
     | MediaPlayerEntityFeature.VOLUME_SET
     | MediaPlayerEntityFeature.SELECT_SOURCE
     | MediaPlayerEntityFeature.TURN_OFF
     | MediaPlayerEntityFeature.TURN_ON
-    | MediaPlayerEntityFeature.PLAY
-    | MediaPlayerEntityFeature.NEXT_TRACK
-    | MediaPlayerEntityFeature.PREVIOUS_TRACK
-    | MediaPlayerEntityFeature.STOP
     | MediaPlayerEntityFeature.SELECT_SOUND_MODE
 )
 
@@ -104,6 +107,63 @@ def addServices():
         SmartThingsSoundbarMediaPlayer.async_set_space_fit_sound.__name__,
     )
 
+    platform.async_register_entity_service(
+        "set_sound_from",
+        cv.make_entity_service_schema(
+            {vol.Required("mode"): int, vol.Optional("detail_name"): str}
+        ),
+        SmartThingsSoundbarMediaPlayer.async_set_sound_from.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "play_track",
+        cv.make_entity_service_schema(
+            {vol.Required("uri"): str, vol.Optional("level"): vol.All(int, vol.Range(min=0, max=100))}
+        ),
+        SmartThingsSoundbarMediaPlayer.async_play_track.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "play_track_and_restore",
+        cv.make_entity_service_schema(
+            {vol.Required("uri"): str, vol.Optional("level"): vol.All(int, vol.Range(min=0, max=100))}
+        ),
+        SmartThingsSoundbarMediaPlayer.async_play_track_and_restore.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "play_track_and_resume",
+        cv.make_entity_service_schema(
+            {vol.Required("uri"): str, vol.Optional("level"): vol.All(int, vol.Range(min=0, max=100))}
+        ),
+        SmartThingsSoundbarMediaPlayer.async_play_track_and_resume.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "execute_set",
+        cv.make_entity_service_schema(
+            {
+                vol.Required("href"): str,
+                vol.Required("property"): str,
+                # Accept JSON as string for UI friendliness; we parse it in code.
+                vol.Required("value"): str,
+            }
+        ),
+        SmartThingsSoundbarMediaPlayer.async_execute_set.__name__,
+    )
+
+    platform.async_register_entity_service(
+        "ocf_post",
+        cv.make_entity_service_schema(
+            {
+                vol.Required("href"): str,
+                # JSON object as string
+                vol.Required("value"): str,
+            }
+        ),
+        SmartThingsSoundbarMediaPlayer.async_ocf_post.__name__,
+    )
+
 
 
 
@@ -115,24 +175,20 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities = []
     for key in domain_data.devices:
         device_config: DeviceConfig = domain_data.devices[key]
-        session = async_get_clientsession(hass)
         device = device_config.device
+        coordinator: SoundbarCoordinator = device_config.coordinator
         if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            entity_id = generate_entity_id(
-                "media_player.{}", device.device_name, hass=hass
-            )
-            entities.append(SmartThingsSoundbarMediaPlayer(device, entity_id, session))
+            entities.append(SmartThingsSoundbarMediaPlayer(coordinator))
     async_add_entities(entities)
     return True
 
 
-class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
-    def __init__(self, device: SoundbarDevice, entity_id: str, session):
-        self.session = session
-        self.device = device
-        self.entity_id = entity_id
-        self._attr_unique_id = f"{self.device.device_id}_mp"
-
+class SmartThingsSoundbarMediaPlayer(CoordinatorEntity[SoundbarCoordinator], MediaPlayerEntity):
+    def __init__(self, coordinator: SoundbarCoordinator):
+        super().__init__(coordinator)
+        self.device: SoundbarDevice = coordinator.data
+        self._attr_unique_id = f"{self.device.device_id}_media_player"
+        self._attr_name = self.device.device_name
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self.device.device_id)},
             name=self.device.device_name,
@@ -141,8 +197,9 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
             sw_version=self.device.firmware_version,
         )
 
-    async def async_update(self):
-        await self.device.update()
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.last_update_success
 
     # ---------- GENERAL SETTINGS ------------
 
@@ -152,7 +209,17 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     @property
     def supported_features(self):
-        return SUPPORT_SMARTTHINGS_SOUNDBAR
+        features = SUPPORT_SMARTTHINGS_SOUNDBAR
+        # Don't advertise sound mode selection if we don't have a list.
+        if not (self.sound_mode_list or []):
+            features &= ~MediaPlayerEntityFeature.SELECT_SOUND_MODE
+        # We can still select source via cycling if supportedInputSources exists.
+        if not (self.source_list or []):
+            features &= ~MediaPlayerEntityFeature.SELECT_SOURCE
+
+        # Newer OCF soundbars often do not expose media playback capabilities, so we don't
+        # advertise PLAY/PAUSE/STOP unless explicitly added later.
+        return features
 
     @property
     def name(self):
@@ -166,9 +233,11 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_turn_off(self):
         await self.device.switch_off()
+        await self.coordinator.async_request_refresh()
 
     async def async_turn_on(self):
         await self.device.switch_on()
+        await self.coordinator.async_request_refresh()
 
     # ---------- VOLUME ------------
     @property
@@ -181,15 +250,19 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_set_volume_level(self, volume):
         await self.device.set_volume(volume)
+        await self.coordinator.async_request_refresh()
 
     async def async_mute_volume(self, mute):
         await self.device.mute_volume(mute)
+        await self.coordinator.async_request_refresh()
 
     async def async_volume_up(self):
         await self.device.volume_up()
+        await self.coordinator.async_request_refresh()
 
     async def async_volume_down(self):
         await self.device.volume_down()
+        await self.coordinator.async_request_refresh()
 
     # ---------- INPUT SOURCES ------------
 
@@ -203,6 +276,7 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_select_source(self, source):
         await self.device.select_source(source)
+        await self.coordinator.async_request_refresh()
 
     # ---------- SOUND MODE ------------
 
@@ -216,6 +290,7 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_select_sound_mode(self, sound_mode):
         await self.device.select_sound_mode(sound_mode)
+        await self.coordinator.async_request_refresh()
 
     # ---------- MEDIA ------------
     @property
@@ -244,32 +319,41 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_media_play(self):
         await self.device.media_play()
+        await self.coordinator.async_request_refresh()
 
     async def async_media_pause(self):
         await self.device.media_pause()
+        await self.coordinator.async_request_refresh()
 
     async def async_media_next_track(self):
         await self.device.media_next_track()
+        await self.coordinator.async_request_refresh()
 
     async def async_media_previous_track(self):
         await self.device.media_previous_track()
+        await self.coordinator.async_request_refresh()
 
     async def async_media_stop(self):
         await self.device.media_stop()
+        await self.coordinator.async_request_refresh()
 
     # ---------- SERVICE_UTILITY ------------
 
     async def async_set_woofer_level(self, level: int):
         await self.device.set_woofer(level)
+        await self.coordinator.async_request_refresh()
 
     async def async_set_bass_mode(self, enabled: bool):
         await self.device.set_bass_mode(enabled)
+        await self.coordinator.async_request_refresh()
 
     async def async_set_voice_mode(self, enabled: bool):
         await self.device.set_voice_amplifier(enabled)
+        await self.coordinator.async_request_refresh()
 
     async def async_set_night_mode(self, enabled: bool):
         await self.device.set_night_mode(enabled)
+        await self.coordinator.async_request_refresh()
 
     # ---------- SERVICE_UTILITY ------------
 
@@ -277,15 +361,56 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
         await self.device.set_speaker_level(
             SpeakerIdentifier(speaker_identifier), level
         )
+        await self.coordinator.async_request_refresh()
 
     async def async_set_rear_speaker_mode(self, speaker_mode: str):
         await self.device.set_rear_speaker_mode(RearSpeakerMode(speaker_mode))
+        await self.coordinator.async_request_refresh()
 
     async def async_set_active_voice_amplifier(self, enabled: bool):
         await self.device.set_active_voice_amplifier(enabled)
+        await self.coordinator.async_request_refresh()
 
     async def async_set_space_fit_sound(self, enabled: bool):
         await self.device.set_space_fit_sound(enabled)
+        await self.coordinator.async_request_refresh()
+
+    async def async_set_sound_from(self, mode: int, detail_name: str | None = None):
+        args = [mode] if not detail_name else [mode, detail_name]
+        await self.device.command("samsungvd.soundFrom", "setSoundFrom", args)
+        await self.coordinator.async_request_refresh()
+
+    async def async_play_track(self, uri: str, level: int | None = None):
+        await self.device.play_track(uri, level)
+        await self.coordinator.async_request_refresh()
+
+    async def async_play_track_and_restore(self, uri: str, level: int | None = None):
+        await self.device.play_track_and_restore(uri, level)
+        await self.coordinator.async_request_refresh()
+
+    async def async_play_track_and_resume(self, uri: str, level: int | None = None):
+        await self.device.play_track_and_resume(uri, level)
+        await self.coordinator.async_request_refresh()
+
+    async def async_execute_set(self, href: str, property: str, value: str):
+        # Parse JSON if possible, otherwise treat as plain string.
+        parsed: Any
+        try:
+            parsed = json.loads(value)
+        except Exception:
+            parsed = value
+        await self.device.execute_set_raw(href, property, parsed)
+        await self.coordinator.async_request_refresh()
+
+    async def async_ocf_post(self, href: str, value: str):
+        try:
+            parsed = json.loads(value)
+        except Exception as exc:
+            raise ValueError("ocf_post value must be JSON object string") from exc
+        if not isinstance(parsed, dict):
+            raise ValueError("ocf_post value must be a JSON object")
+        await self.device.ocf_post(href, parsed)
+        await self.coordinator.async_request_refresh()
 
     # This property can be uncommented for some extra_attributes
     # Still enabling this can cause side-effects.
