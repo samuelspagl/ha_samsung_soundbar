@@ -5,14 +5,7 @@ from __future__ import annotations
 import logging
 
 from aiohttp import ClientError
-from pysmartthings import (
-    SmartThings,
-    SmartThingsAuthenticationFailedError,
-    SmartThingsConnectionError,
-    SmartThingsError,
-    SmartThingsForbiddenError,
-    SmartThingsNotFoundError,
-)
+import pysmartthings
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ACCESS_TOKEN, Platform
@@ -46,6 +39,7 @@ from .const import (
 from .models import SoundbarRuntimeData
 
 _LOGGER = logging.getLogger(__name__)
+SmartThings = pysmartthings.SmartThings
 
 PLATFORMS = [
     Platform.MEDIA_PLAYER,
@@ -55,6 +49,57 @@ PLATFORMS = [
     Platform.SELECT,
     Platform.SENSOR,
 ]
+
+
+def _create_api_client(
+    session,
+    token: str,
+    refresh_token_function=None,
+) -> SmartThings:
+    """Create a SmartThings client compatible with multiple pysmartthings versions."""
+    try:
+        api: SmartThings = SmartThings(session=session, _token=token)
+    except TypeError:
+        # pysmartthings<3 uses SmartThings(session, token)
+        api = SmartThings(session, token)
+
+    if refresh_token_function is not None and hasattr(api, "refresh_token_function"):
+        api.refresh_token_function = refresh_token_function
+    return api
+
+
+async def _fetch_device(api: SmartThings, device_id: str):
+    """Fetch device with compatibility across pysmartthings versions."""
+    get_device = getattr(api, "get_device", None)
+    if callable(get_device):
+        return await get_device(device_id)
+    legacy_device = getattr(api, "device", None)
+    if callable(legacy_device):
+        return await legacy_device(device_id)
+    raise ConfigEntryError("Unsupported pysmartthings version: no device lookup method")
+
+
+def _is_auth_error(excp: Exception) -> bool:
+    """Check if an exception indicates authentication failure."""
+    return excp.__class__.__name__ in {
+        "SmartThingsAuthenticationFailedError",
+        "SmartThingsForbiddenError",
+    }
+
+
+def _is_not_found_error(excp: Exception) -> bool:
+    """Check if an exception indicates missing device."""
+    return excp.__class__.__name__ in {"SmartThingsNotFoundError", "APINotFoundError"}
+
+
+def _is_connection_error(excp: Exception) -> bool:
+    """Check if an exception indicates temporary connection issue."""
+    return excp.__class__.__name__ in {"SmartThingsConnectionError"}
+
+
+def _is_smartthings_error(excp: Exception) -> bool:
+    """Check if an exception is a SmartThings library error."""
+    return excp.__class__.__name__.startswith("SmartThings")
 
 
 def _infer_auth_mode(entry: ConfigEntry) -> str:
@@ -102,8 +147,6 @@ async def _build_api_for_entry(
         if not isinstance(access_token, str) or not access_token:
             raise ConfigEntryAuthFailed("Missing OAuth access token")
 
-        api = SmartThings(session=session, _token=access_token)
-
         async def _refresh_token() -> str:
             await oauth_session.async_ensure_token_valid()
             try:
@@ -114,14 +157,18 @@ async def _build_api_for_entry(
                 raise ConfigEntryAuthFailed("Missing OAuth access token")
             return token
 
-        api.refresh_token_function = _refresh_token
+        api = _create_api_client(
+            session=session,
+            token=access_token,
+            refresh_token_function=_refresh_token,
+        )
         return api, oauth_session
 
     token = entry.data.get(CONF_ENTRY_API_KEY)
     if not isinstance(token, str) or not token:
         raise ConfigEntryAuthFailed("Missing SmartThings API token")
 
-    return SmartThings(session=session, _token=token), None
+    return _create_api_client(session=session, token=token), None
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -133,15 +180,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryError("Missing SmartThings device id")
 
     try:
-        smart_things_device = await api.get_device(device_id)
-    except (SmartThingsAuthenticationFailedError, SmartThingsForbiddenError) as err:
-        raise ConfigEntryAuthFailed from err
-    except SmartThingsNotFoundError as err:
-        raise ConfigEntryError(f"SmartThings device '{device_id}' not found") from err
-    except (SmartThingsConnectionError, ClientError) as err:
-        raise ConfigEntryNotReady from err
-    except SmartThingsError as err:
-        raise ConfigEntryNotReady from err
+        smart_things_device = await _fetch_device(api, device_id)
+    except Exception as err:  # noqa: BLE001
+        if _is_auth_error(err):
+            raise ConfigEntryAuthFailed from err
+        if _is_not_found_error(err):
+            raise ConfigEntryError(f"SmartThings device '{device_id}' not found") from err
+        if _is_connection_error(err) or isinstance(err, ClientError):
+            raise ConfigEntryNotReady from err
+        if _is_smartthings_error(err):
+            raise ConfigEntryNotReady from err
+        raise
 
     max_volume = entry.data.get(CONF_ENTRY_MAX_VOLUME, 100)
     if not isinstance(max_volume, int):

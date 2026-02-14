@@ -6,14 +6,7 @@ from collections.abc import Mapping
 import logging
 from typing import Any
 
-from pysmartthings import (
-    SmartThings,
-    SmartThingsAuthenticationFailedError,
-    SmartThingsConnectionError,
-    SmartThingsError,
-    SmartThingsForbiddenError,
-    SmartThingsNotFoundError,
-)
+import pysmartthings
 import voluptuous as vol
 from voluptuous import All, Range
 
@@ -44,6 +37,40 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 SMARTTHINGS_SCOPES = ["r:devices:*", "x:devices:*"]
+SmartThings = pysmartthings.SmartThings
+
+
+def _create_api_client(session, token: str):
+    """Create a SmartThings client compatible with multiple pysmartthings versions."""
+    try:
+        return SmartThings(session=session, _token=token)
+    except TypeError:
+        # pysmartthings<3 uses SmartThings(session, token)
+        return SmartThings(session, token)
+
+
+async def _fetch_device(api, device_id: str):
+    """Fetch device with compatibility across pysmartthings versions."""
+    get_device = getattr(api, "get_device", None)
+    if callable(get_device):
+        return await get_device(device_id)
+    legacy_device = getattr(api, "device", None)
+    if callable(legacy_device):
+        return await legacy_device(device_id)
+    raise RuntimeError("Unsupported pysmartthings version: no device lookup method")
+
+
+def _map_flow_error(excp: Exception) -> tuple[str | None, str]:
+    """Map SmartThings exceptions to config flow errors."""
+    exc_name = excp.__class__.__name__
+
+    if exc_name in {"SmartThingsAuthenticationFailedError", "SmartThingsForbiddenError"}:
+        return CONF_ENTRY_API_KEY, "invalid_auth"
+    if exc_name in {"SmartThingsNotFoundError", "APINotFoundError"}:
+        return CONF_ENTRY_DEVICE_ID, "device_not_found"
+    if exc_name in {"SmartThingsConnectionError"}:
+        return None, "cannot_connect"
+    return None, "fetch_failed"
 
 
 class SamsungSoundbarFlowHandler(
@@ -72,11 +99,8 @@ class SamsungSoundbarFlowHandler(
 
     async def _async_validate_device(self, token: str, device_id: str):
         """Validate a SmartThings device with a bearer token."""
-        api = SmartThings(
-            session=async_get_clientsession(self.hass),
-            _token=token,
-        )
-        return await api.get_device(device_id)
+        api = _create_api_client(async_get_clientsession(self.hass), token)
+        return await _fetch_device(api, device_id)
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -99,14 +123,12 @@ class SamsungSoundbarFlowHandler(
                 device = await self._async_validate_device(
                     user_input[CONF_ENTRY_API_KEY], user_input[CONF_ENTRY_DEVICE_ID]
                 )
-            except (SmartThingsAuthenticationFailedError, SmartThingsForbiddenError):
-                errors[CONF_ENTRY_API_KEY] = "invalid_auth"
-            except SmartThingsNotFoundError:
-                errors[CONF_ENTRY_DEVICE_ID] = "device_not_found"
-            except SmartThingsConnectionError:
-                errors["base"] = "cannot_connect"
-            except SmartThingsError:
-                errors["base"] = "fetch_failed"
+            except Exception as excp:  # noqa: BLE001
+                field, message = _map_flow_error(excp)
+                if field:
+                    errors[field] = message
+                else:
+                    errors["base"] = message
             else:
                 device_name = user_input[CONF_ENTRY_DEVICE_NAME] or (
                     device.label or device.name or user_input[CONF_ENTRY_DEVICE_ID]
@@ -197,14 +219,12 @@ class SamsungSoundbarFlowHandler(
                 device = await self._async_validate_device(
                     access_token, user_input[CONF_ENTRY_DEVICE_ID]
                 )
-            except (SmartThingsAuthenticationFailedError, SmartThingsForbiddenError):
-                errors["base"] = "invalid_auth"
-            except SmartThingsNotFoundError:
-                errors[CONF_ENTRY_DEVICE_ID] = "device_not_found"
-            except SmartThingsConnectionError:
-                errors["base"] = "cannot_connect"
-            except SmartThingsError:
-                errors["base"] = "fetch_failed"
+            except Exception as excp:  # noqa: BLE001
+                field, message = _map_flow_error(excp)
+                if field:
+                    errors[field] = message
+                else:
+                    errors["base"] = message
             else:
                 device_name = user_input[CONF_ENTRY_DEVICE_NAME] or (
                     device.label or device.name or user_input[CONF_ENTRY_DEVICE_ID]
