@@ -2,24 +2,16 @@
     "config": {
         "step": {
             "user": {
-                "data": {
-                    "api_key": "SmartThings API Token",
-                    "device_id": "Device ID",
-                    "device_name": "Device Name",
-                    "device_volume": "Max Volume (int)"
-                },
-                "description": "Please enter your credentials.",
-                "title": "Authentication"
+                "description": "Link your SmartThings account to continue.",
+                "title": "Connect Account"
             },
             "device": {
                 "data": {
-                    "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
-                    "settings_eq": "Enable 'EQ selector' capabilities",
-                    "settings_soundmode": "Enable 'Soundmode selector' capabilities",
-                    "settings_woofer": "Enable 'Woofer number' capability"
+                    "device_id": "Device",
+                    "device_name": "Device Name"
                 },
-                "description": "Some soundbars have a different featureset than others. Please the features supported by your soundbar (visible in the SmartThings App).",
-                "title": "Device Settings"
+                "description": "Choose the SmartThings soundbar you want to control.",
+                "title": "Select Device"
             },
             "reconfigure_confirm": {
                 "data": {
@@ -29,9 +21,17 @@
                     "settings_woofer": "Enable 'Woofer number' capability",
                     "device_volume": "Max Volume (int)"
                 },
-                "description": "Some soundbars have a different featureset than others. Please the features supported by your soundbar (visible in the SmartThings App).",
+                "description": "Some soundbars have a different featureset than others. Please select the features supported by your soundbar (visible in the SmartThings App).",
                 "title": "Device Settings"
+            },
+            "reauth_confirm": {
+                "description": "Reconnect your SmartThings account to refresh expired credentials.",
+                "title": "Reconnect Account"
             }
+        },
+        "abort": {
+            "fetch_failed": "Could not connect to SmartThings. Please try again.",
+            "no_devices": "No SmartThings devices were found for this account."
         }
     },
     "selector": {
@@ -108,7 +108,7 @@
         "set_speaker_level": {
             "name": "Change Speaker Level",
             "description": "Change the volume of individual speakers.",
-            "fields":{
+            "fields": {
                 "speaker_identifier": {
                     "name": "Speaker Identifier",
                     "description": "Identifier of the speaker."
@@ -122,7 +122,7 @@
         "set_rear_speaker_mode": {
             "name": "Set Rear Speaker Mode",
             "description": "Use your rear speakers as 'Front' or 'Rear' speakers.",
-            "fields":{
+            "fields": {
                 "speaker_mode": {
                     "name": "Speaker mode",
                     "description": "Weather the speaker are used as rear / front speakers."
@@ -147,6 +147,21 @@
                     "name": "On/Off",
                     "description": "See name."
                 }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
+                    "settings_eq": "Enable 'EQ selector' capabilities",
+                    "settings_soundmode": "Enable 'Soundmode selector' capabilities",
+                    "settings_woofer": "Enable 'Woofer number' capability",
+                    "device_volume": "Max Volume (int)"
+                },
+                "description": "Some soundbars have a different featureset than others. Please select the features supported by your soundbar (visible in the SmartThings App).",
+                "title": "Device Settings"
             }
         }
     }

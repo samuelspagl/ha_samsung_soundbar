@@ -5,7 +5,6 @@ from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 
 DOMAIN = "samsung_soundbar"
 CONF_CLOUD_INTEGRATION = "cloud_integration"
-CONF_ENTRY_API_KEY = "api_key"
 CONF_ENTRY_DEVICE_ID = "device_id"
 CONF_ENTRY_DEVICE_NAME = "device_name"
 CONF_ENTRY_MAX_VOLUME = "device_volume"
