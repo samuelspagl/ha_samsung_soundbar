@@ -1,14 +1,35 @@
+"""Config flow for Samsung Soundbar."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
 import logging
 from typing import Any
 
-import pysmartthings
+from pysmartthings import (
+    SmartThings,
+    SmartThingsAuthenticationFailedError,
+    SmartThingsConnectionError,
+    SmartThingsError,
+    SmartThingsForbiddenError,
+    SmartThingsNotFoundError,
+)
 import voluptuous as vol
-from homeassistant import config_entries
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from pysmartthings import APIResponseError
 from voluptuous import All, Range
 
+from homeassistant.config_entries import (
+    SOURCE_REAUTH,
+    ConfigEntry,
+    ConfigFlowResult,
+)
+from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
 from .const import (
+    AUTH_MODE_OAUTH,
+    AUTH_MODE_PAT,
+    CONF_AUTH_MODE,
     CONF_ENTRY_API_KEY,
     CONF_ENTRY_DEVICE_ID,
     CONF_ENTRY_DEVICE_NAME,
@@ -22,85 +43,263 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-
-async def validate_input(api, device_id: str):
-    try:
-        return await api.device(device_id)
-    except APIResponseError as excp:
-        _LOGGER.error("[Samsung Soundbar] ERROR: %s", str(excp))
-        raise ValueError
+SMARTTHINGS_SCOPES = ["r:devices:*", "x:devices:*"]
 
 
-class ExampleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    async def async_step_user(self, user_input=None):
-        if user_input is not None:
-            self.user_input = user_input
-            return await self.async_step_device()
+class SamsungSoundbarFlowHandler(
+    config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN
+):
+    """Handle Samsung Soundbar config flow."""
 
-        return self.async_show_form(
+    DOMAIN = DOMAIN
+    VERSION = 2
+
+    def __init__(self) -> None:
+        """Initialize flow."""
+        super().__init__()
+        self._pending_data: dict[str, Any] = {}
+        self._reconfigure_entry: ConfigEntry | None = None
+
+    @property
+    def logger(self) -> logging.Logger:
+        """Return logger."""
+        return _LOGGER
+
+    @property
+    def extra_authorize_data(self) -> dict[str, Any]:
+        """Extra data that needs to be appended to the authorize url."""
+        return {"scope": " ".join(SMARTTHINGS_SCOPES)}
+
+    async def _async_validate_device(self, token: str, device_id: str):
+        """Validate a SmartThings device with a bearer token."""
+        api = SmartThings(
+            session=async_get_clientsession(self.hass),
+            _token=token,
+        )
+        return await api.get_device(device_id)
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle initial step."""
+        return self.async_show_menu(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_ENTRY_API_KEY): str,
-                    vol.Required(CONF_ENTRY_DEVICE_ID): str,
-                    vol.Required(CONF_ENTRY_DEVICE_NAME): str,
-                    vol.Required(CONF_ENTRY_MAX_VOLUME, default=100): All(
-                        int, Range(min=1, max=100)
-                    ),
-                }
-            ),
+            menu_options=["manual", "oauth"],
         )
 
-    async def async_step_device(self, user_input: dict[str, any] | None = None):
+    async def async_step_manual(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle PAT setup."""
+        errors: dict[str, str] = {}
+        defaults = user_input or {}
+
         if user_input is not None:
-            self.user_input.update(user_input)
+            try:
+                device = await self._async_validate_device(
+                    user_input[CONF_ENTRY_API_KEY], user_input[CONF_ENTRY_DEVICE_ID]
+                )
+            except (SmartThingsAuthenticationFailedError, SmartThingsForbiddenError):
+                errors[CONF_ENTRY_API_KEY] = "invalid_auth"
+            except SmartThingsNotFoundError:
+                errors[CONF_ENTRY_DEVICE_ID] = "device_not_found"
+            except SmartThingsConnectionError:
+                errors["base"] = "cannot_connect"
+            except SmartThingsError:
+                errors["base"] = "fetch_failed"
+            else:
+                device_name = user_input[CONF_ENTRY_DEVICE_NAME] or (
+                    device.label or device.name or user_input[CONF_ENTRY_DEVICE_ID]
+                )
+                self._pending_data = {
+                    CONF_AUTH_MODE: AUTH_MODE_PAT,
+                    CONF_ENTRY_API_KEY: user_input[CONF_ENTRY_API_KEY],
+                    CONF_ENTRY_DEVICE_ID: user_input[CONF_ENTRY_DEVICE_ID],
+                    CONF_ENTRY_DEVICE_NAME: device_name,
+                    CONF_ENTRY_MAX_VOLUME: user_input[CONF_ENTRY_MAX_VOLUME],
+                }
+                return await self.async_step_device()
+
+        return self.async_show_form(
+            step_id="manual",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_ENTRY_API_KEY,
+                        default=defaults.get(CONF_ENTRY_API_KEY, ""),
+                    ): str,
+                    vol.Required(
+                        CONF_ENTRY_DEVICE_ID,
+                        default=defaults.get(CONF_ENTRY_DEVICE_ID, ""),
+                    ): str,
+                    vol.Required(
+                        CONF_ENTRY_DEVICE_NAME,
+                        default=defaults.get(CONF_ENTRY_DEVICE_NAME, ""),
+                    ): str,
+                    vol.Required(
+                        CONF_ENTRY_MAX_VOLUME,
+                        default=defaults.get(CONF_ENTRY_MAX_VOLUME, 100),
+                    ): All(int, Range(min=1, max=100)),
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_oauth(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Start OAuth setup."""
+        return await self.async_step_pick_implementation(user_input)
+
+    async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
+        """Create an entry after OAuth flow."""
+        if self.source == SOURCE_REAUTH:
+            entry = self._get_reauth_entry()
+            device_id = entry.data.get(CONF_ENTRY_DEVICE_ID)
+            if isinstance(device_id, str):
+                await self.async_set_unique_id(device_id)
+                self._abort_if_unique_id_mismatch(reason="reauth_account_mismatch")
+
+            new_data = {**entry.data, **data, CONF_AUTH_MODE: AUTH_MODE_OAUTH}
+            new_data.pop(CONF_ENTRY_API_KEY, None)
+            return self.async_update_reload_and_abort(entry, data=new_data)
+
+        if self._reconfigure_entry is not None:
+            new_data = {
+                **self._reconfigure_entry.data,
+                **data,
+                CONF_AUTH_MODE: AUTH_MODE_OAUTH,
+            }
+            new_data.pop(CONF_ENTRY_API_KEY, None)
+            return self.async_update_reload_and_abort(
+                self._reconfigure_entry,
+                data=new_data,
+                reason="reconfigure_successful",
+            )
+
+        self._pending_data = {**data, CONF_AUTH_MODE: AUTH_MODE_OAUTH}
+        return await self.async_step_oauth_device()
+
+    async def async_step_oauth_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Collect device data after OAuth."""
+        errors: dict[str, str] = {}
+        defaults = user_input or {}
+
+        if user_input is not None:
+            token_data = self._pending_data.get(CONF_TOKEN, {})
+            access_token = token_data.get(CONF_ACCESS_TOKEN)
+            if not isinstance(access_token, str) or not access_token:
+                return self.async_abort(reason="oauth_token_invalid")
 
             try:
-                session = async_get_clientsession(self.hass)
-                api = pysmartthings.SmartThings(
-                    session, self.user_input.get(CONF_ENTRY_API_KEY)
+                device = await self._async_validate_device(
+                    access_token, user_input[CONF_ENTRY_DEVICE_ID]
                 )
-                device = await validate_input(
-                    api, self.user_input.get(CONF_ENTRY_DEVICE_ID)
+            except (SmartThingsAuthenticationFailedError, SmartThingsForbiddenError):
+                errors["base"] = "invalid_auth"
+            except SmartThingsNotFoundError:
+                errors[CONF_ENTRY_DEVICE_ID] = "device_not_found"
+            except SmartThingsConnectionError:
+                errors["base"] = "cannot_connect"
+            except SmartThingsError:
+                errors["base"] = "fetch_failed"
+            else:
+                device_name = user_input[CONF_ENTRY_DEVICE_NAME] or (
+                    device.label or device.name or user_input[CONF_ENTRY_DEVICE_ID]
                 )
-                _LOGGER.debug(
-                    f"Successfully validated Input, Creating entry with title {DOMAIN} and data {user_input}"
+                self._pending_data.update(
+                    {
+                        CONF_ENTRY_DEVICE_ID: user_input[CONF_ENTRY_DEVICE_ID],
+                        CONF_ENTRY_DEVICE_NAME: device_name,
+                        CONF_ENTRY_MAX_VOLUME: user_input[CONF_ENTRY_MAX_VOLUME],
+                    }
                 )
-            except Exception as excp:
-                _LOGGER.error(f"The ConfigFlow triggered an exception {excp}")
-                return self.async_abort(reason="fetch_failed")
-            return self.async_create_entry(title=DOMAIN, data=self.user_input)
+                return await self.async_step_device()
+
+        return self.async_show_form(
+            step_id="oauth_device",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_ENTRY_DEVICE_ID,
+                        default=defaults.get(CONF_ENTRY_DEVICE_ID, ""),
+                    ): str,
+                    vol.Required(
+                        CONF_ENTRY_DEVICE_NAME,
+                        default=defaults.get(CONF_ENTRY_DEVICE_NAME, ""),
+                    ): str,
+                    vol.Required(
+                        CONF_ENTRY_MAX_VOLUME,
+                        default=defaults.get(CONF_ENTRY_MAX_VOLUME, 100),
+                    ): All(int, Range(min=1, max=100)),
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Collect optional feature settings and create entry."""
+        if user_input is not None:
+            entry_data = {**self._pending_data, **user_input}
+            device_id = entry_data[CONF_ENTRY_DEVICE_ID]
+            await self.async_set_unique_id(device_id)
+            self._abort_if_unique_id_configured()
+            return self.async_create_entry(
+                title=entry_data[CONF_ENTRY_DEVICE_NAME],
+                data=entry_data,
+            )
 
         return self.async_show_form(
             step_id="device",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES): bool,
-                    vol.Required(CONF_ENTRY_SETTINGS_EQ_SELECTOR): bool,
-                    vol.Required(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR): bool,
-                    vol.Required(CONF_ENTRY_SETTINGS_WOOFER_NUMBER): bool,
+                    vol.Required(
+                        CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES,
+                        default=False,
+                    ): bool,
+                    vol.Required(CONF_ENTRY_SETTINGS_EQ_SELECTOR, default=False): bool,
+                    vol.Required(
+                        CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR,
+                        default=False,
+                    ): bool,
+                    vol.Required(CONF_ENTRY_SETTINGS_WOOFER_NUMBER, default=False): bool,
                 }
             ),
         )
 
-    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
-        """Handle a reconfiguration flow initialized by the user."""
-        self.config_entry = self.hass.config_entries.async_get_entry(
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle integration reconfiguration."""
+        self._reconfigure_entry = self.hass.config_entries.async_get_entry(
             self.context["entry_id"]
         )
+        if self._reconfigure_entry is None:
+            return self.async_abort(reason="entry_not_found")
+
+        auth_mode = self._reconfigure_entry.data.get(CONF_AUTH_MODE, AUTH_MODE_PAT)
+        if auth_mode == AUTH_MODE_PAT:
+            return self.async_show_menu(
+                step_id="reconfigure",
+                menu_options=["reconfigure_confirm", "reconfigure_oauth"],
+            )
         return await self.async_step_reconfigure_confirm()
 
     async def async_step_reconfigure_confirm(
         self, user_input: dict[str, Any] | None = None
-    ):
-        """Handle a reconfiguration flow initialized by the user."""
-        errors: dict[str, str] = {}
-        assert self.config_entry
+    ) -> ConfigFlowResult:
+        """Update device feature settings."""
+        if self._reconfigure_entry is None:
+            return self.async_abort(reason="entry_not_found")
 
         if user_input is not None:
             return self.async_update_reload_and_abort(
-                self.config_entry,
-                data={**self.config_entry.data, **user_input},
+                self._reconfigure_entry,
+                data_updates=user_input,
                 reason="reconfigure_successful",
             )
 
@@ -110,32 +309,67 @@ class ExampleConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(
                         CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES,
-                        default=self.config_entry.data.get(
-                            CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES
+                        default=self._reconfigure_entry.data.get(
+                            CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES, False
                         ),
                     ): bool,
                     vol.Required(
                         CONF_ENTRY_SETTINGS_EQ_SELECTOR,
-                        default=self.config_entry.data.get(
-                            CONF_ENTRY_SETTINGS_EQ_SELECTOR
+                        default=self._reconfigure_entry.data.get(
+                            CONF_ENTRY_SETTINGS_EQ_SELECTOR, False
                         ),
                     ): bool,
                     vol.Required(
                         CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR,
-                        default=self.config_entry.data.get(
-                            CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR
+                        default=self._reconfigure_entry.data.get(
+                            CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR, False
                         ),
                     ): bool,
                     vol.Required(
                         CONF_ENTRY_SETTINGS_WOOFER_NUMBER,
-                        default=self.config_entry.data.get(
-                            CONF_ENTRY_SETTINGS_WOOFER_NUMBER
+                        default=self._reconfigure_entry.data.get(
+                            CONF_ENTRY_SETTINGS_WOOFER_NUMBER, False
                         ),
                     ): bool,
-                    vol.Required(CONF_ENTRY_MAX_VOLUME, default=100): All(
-                        int, Range(min=1, max=100)
-                    ),
+                    vol.Required(
+                        CONF_ENTRY_MAX_VOLUME,
+                        default=self._reconfigure_entry.data.get(
+                            CONF_ENTRY_MAX_VOLUME, 100
+                        ),
+                    ): All(int, Range(min=1, max=100)),
                 }
             ),
-            errors=errors,
+        )
+
+    async def async_step_reconfigure_oauth(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Migrate PAT entry to OAuth through reconfigure."""
+        if self._reconfigure_entry is None:
+            return self.async_abort(reason="entry_not_found")
+        return await self.async_step_pick_implementation(user_input)
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Handle reauthentication for OAuth entries."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Confirm reauthentication."""
+        reauth_entry = self._get_reauth_entry()
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reauth_confirm",
+                description_placeholders={"name": reauth_entry.title},
+            )
+
+        implementation = reauth_entry.data.get("auth_implementation")
+        if not isinstance(implementation, str) or not implementation:
+            return self.async_abort(reason="missing_auth_implementation")
+
+        return await self.async_step_pick_implementation(
+            user_input={"implementation": implementation}
         )

@@ -1,34 +1,30 @@
-import logging
+"""Sensor platform for Samsung Soundbar."""
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorStateClass,
-)
+from __future__ import annotations
+
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import CONF_ENTRY_DEVICE_ID, DOMAIN
-from .models import DeviceConfig
-
-_LOGGER = logging.getLogger(__name__)
+from .const import DOMAIN
+from .models import SoundbarRuntimeData
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    domain_data = hass.data[DOMAIN]
-    entities = []
-    for key in domain_data.devices:
-        device_config: DeviceConfig = domain_data.devices[key]
-        device = device_config.device
-
-        if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            entities.append(VolumeSensor(device, "volume_level", "mdi:volume-high"))
-    async_add_entities(entities)
+async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities) -> bool:
+    """Set up sensor entities from a config entry."""
+    runtime_data: SoundbarRuntimeData = config_entry.runtime_data
+    async_add_entities(
+        [VolumeSensor(runtime_data.device, "volume_level", "mdi:volume-high")]
+    )
     return True
 
 
 class VolumeSensor(SensorEntity):
+    """Volume sensor for soundbar."""
+
     def __init__(self, device: SoundbarDevice, append_unique_id: str, icon_string: str):
+        """Initialize sensor."""
         self.entity_id = f"sensor.{device.device_name}_{append_unique_id}"
         self.__device = device
         self._attr_unique_id = f"{device.device_id}_sw_{append_unique_id}"
@@ -42,15 +38,14 @@ class VolumeSensor(SensorEntity):
         )
         self.__append_unique_id = append_unique_id
 
-        _attr_device_class = SensorDeviceClass.VOLUME
+    @property
+    def name(self):
+        return self.__append_unique_id
 
     @property
     def icon(self) -> str | None:
         return self.__base_icon
 
-    def update(self) -> None:
-        """Fetch new state data for the sensor.
-
-        This is the only method that should fetch new data for Home Assistant.
-        """
-        self._attr_native_value = self.__device.device.status.volume
+    @property
+    def native_value(self) -> float | None:
+        return self.__device.volume_level

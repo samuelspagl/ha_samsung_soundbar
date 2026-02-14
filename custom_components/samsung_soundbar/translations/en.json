@@ -1,153 +1,193 @@
 {
-    "config": {
-        "step": {
-            "user": {
-                "data": {
-                    "api_key": "SmartThings API Token",
-                    "device_id": "Device ID",
-                    "device_name": "Device Name",
-                    "device_volume": "Max Volume (int)"
-                },
-                "description": "Please enter your credentials.",
-                "title": "Authentication"
-            },
-            "device": {
-                "data": {
-                    "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
-                    "settings_eq": "Enable 'EQ selector' capabilities",
-                    "settings_soundmode": "Enable 'Soundmode selector' capabilities",
-                    "settings_woofer": "Enable 'Woofer number' capability"
-                },
-                "description": "Some soundbars have a different featureset than others. Please the features supported by your soundbar (visible in the SmartThings App).",
-                "title": "Device Settings"
-            },
-            "reconfigure_confirm": {
-                "data": {
-                    "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
-                    "settings_eq": "Enable 'EQ selector' capabilities",
-                    "settings_soundmode": "Enable 'Soundmode selector' capabilities",
-                    "settings_woofer": "Enable 'Woofer number' capability",
-                    "device_volume": "Max Volume (int)"
-                },
-                "description": "Some soundbars have a different featureset than others. Please the features supported by your soundbar (visible in the SmartThings App).",
-                "title": "Device Settings"
-            }
+  "config": {
+    "step": {
+      "user": {
+        "title": "Authentication Method",
+        "description": "Choose how you want to connect to SmartThings.",
+        "menu_options": {
+          "manual": "Use API token",
+          "oauth": "Use OAuth"
         }
+      },
+      "manual": {
+        "data": {
+          "api_key": "SmartThings API Token",
+          "device_id": "Device ID",
+          "device_name": "Device Name",
+          "device_volume": "Max Volume (int)"
+        },
+        "description": "Please enter your SmartThings API token and device information.",
+        "title": "Manual Authentication"
+      },
+      "oauth_device": {
+        "data": {
+          "device_id": "Device ID",
+          "device_name": "Device Name",
+          "device_volume": "Max Volume (int)"
+        },
+        "description": "After OAuth authentication, enter the Soundbar device ID. Device name can be customized.",
+        "title": "Select Device"
+      },
+      "device": {
+        "data": {
+          "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
+          "settings_eq": "Enable 'EQ selector' capabilities",
+          "settings_soundmode": "Enable 'Soundmode selector' capabilities",
+          "settings_woofer": "Enable 'Woofer number' capability"
+        },
+        "description": "Some soundbars have a different featureset than others. Please choose the features supported by your soundbar (visible in the SmartThings App).",
+        "title": "Device Settings"
+      },
+      "reconfigure": {
+        "title": "Reconfigure",
+        "description": "Choose what you want to update for this device.",
+        "menu_options": {
+          "reconfigure_confirm": "Update device settings",
+          "reconfigure_oauth": "Migrate to OAuth"
+        }
+      },
+      "reconfigure_confirm": {
+        "data": {
+          "settings_advanced_audio": "Enable 'Advanced Audio switches' capabilities (NightMode, BassMode, VoiceEnhancer)",
+          "settings_eq": "Enable 'EQ selector' capabilities",
+          "settings_soundmode": "Enable 'Soundmode selector' capabilities",
+          "settings_woofer": "Enable 'Woofer number' capability",
+          "device_volume": "Max Volume (int)"
+        },
+        "description": "Some soundbars have a different featureset than others. Please choose the features supported by your soundbar (visible in the SmartThings App).",
+        "title": "Device Settings"
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate",
+        "description": "Reauthenticate {name} to continue using the integration."
+      }
     },
-    "selector": {
-        "soundmode": {
-            "options": {
-                "standard": "Standard",
-                "surround": "Surround",
-                "game": "Gaming",
-                "adaptive sound": "Adaptive Sound"
-            }
-        },
-        "speaker_identifier": {
-            "options": {
-                "Spk_Center": "Center",
-                "Spk_Side": "Side",
-                "Spk_Wide": "Wide",
-                "Spk_Front_Top": "Front Top",
-                "Spk_Rear": "Rear",
-                "Spk_Rear_Top": "Rear Top"
-            }
-        },
-        "rear_speaker_mode": {
-            "options": {
-                "Rear": "Rear",
-                "Front": "Front"
-            }
-        }
+    "error": {
+      "cannot_connect": "Failed to connect to SmartThings.",
+      "fetch_failed": "Failed to fetch data from SmartThings.",
+      "invalid_auth": "Invalid authentication details.",
+      "device_not_found": "SmartThings device not found."
     },
-    "services": {
-        "select_soundmode": {
-            "name": "Select Sound Mode",
-            "description": "Choose between 'Standard', 'Surround', 'Game', and 'Adaptive Sound'."
-        },
-        "set_woofer_level": {
-            "name": "Set Subwoofer Level",
-            "description": "Change the volume of your subwoofer.",
-            "fields": {
-                "level": {
-                    "name": "Volume Level",
-                    "description": "Subwoofer level, from -12 to +6"
-                }
-            }
-        },
-        "set_night_mode": {
-            "name": "Set Night Mode",
-            "description": "Turn 'Night Mode' on/off.",
-            "fields": {
-                "enabled": {
-                    "name": "On/Off",
-                    "description": "See name."
-                }
-            }
-        },
-        "set_bass_enhancer": {
-            "name": "Set Bass Mode",
-            "description": "Turn 'Bass Mode' on/off.",
-            "fields": {
-                "enabled": {
-                    "name": "On/Off",
-                    "description": "See name."
-                }
-            }
-        },
-        "set_voice_enhancer": {
-            "name": "Set Voice Enhancer",
-            "description": "Turn 'Voice Enhancer' on/off.",
-            "fields": {
-                "enabled": {
-                    "name": "On/Off",
-                    "description": "See name."
-                }
-            }
-        },
-        "set_speaker_level": {
-            "name": "Change Speaker Level",
-            "description": "Change the volume of individual speakers.",
-            "fields":{
-                "speaker_identifier": {
-                    "name": "Speaker Identifier",
-                    "description": "Identifier of the speaker."
-                },
-                "level": {
-                    "name": "Level",
-                    "description": "Level of the Speaker from -6 to 6."
-                }
-            }
-        },
-        "set_rear_speaker_mode": {
-            "name": "Set Rear Speaker Mode",
-            "description": "Use your rear speakers as 'Front' or 'Rear' speakers.",
-            "fields":{
-                "speaker_mode": {
-                    "name": "Speaker mode",
-                    "description": "Weather the speaker are used as rear / front speakers."
-                }
-            }
-        },
-        "set_active_voice_amplifier": {
-            "name": "Set Voice Amplifier",
-            "description": "Turn 'Voice Amplifier' on/off.",
-            "fields": {
-                "enabled": {
-                    "name": "On/Off",
-                    "description": "See name."
-                }
-            }
-        },
-        "set_space_fit_sound": {
-            "name": "Set SpaceFitSound",
-            "description": "Turn 'SpaceFitSound' on/off.",
-            "fields": {
-                "enabled": {
-                    "name": "On/Off",
-                    "description": "See name."
-                }
-            }
-        }
+    "abort": {
+      "entry_not_found": "The config entry could not be found.",
+      "oauth_token_invalid": "The OAuth token payload is missing or invalid.",
+      "missing_auth_implementation": "No OAuth implementation is linked to this entry."
     }
+  },
+  "selector": {
+    "soundmode": {
+      "options": {
+        "standard": "Standard",
+        "surround": "Surround",
+        "game": "Gaming",
+        "adaptive sound": "Adaptive Sound"
+      }
+    },
+    "speaker_identifier": {
+      "options": {
+        "Spk_Center": "Center",
+        "Spk_Side": "Side",
+        "Spk_Wide": "Wide",
+        "Spk_Front_Top": "Front Top",
+        "Spk_Rear": "Rear",
+        "Spk_Rear_Top": "Rear Top"
+      }
+    },
+    "rear_speaker_mode": {
+      "options": {
+        "Rear": "Rear",
+        "Front": "Front"
+      }
+    }
+  },
+  "services": {
+    "select_soundmode": {
+      "name": "Select Sound Mode",
+      "description": "Choose between 'Standard', 'Surround', 'Game', and 'Adaptive Sound'."
+    },
+    "set_woofer_level": {
+      "name": "Set Subwoofer Level",
+      "description": "Change the volume of your subwoofer.",
+      "fields": {
+        "level": {
+          "name": "Volume Level",
+          "description": "Subwoofer level, from -12 to +6"
+        }
+      }
+    },
+    "set_night_mode": {
+      "name": "Set Night Mode",
+      "description": "Turn 'Night Mode' on/off.",
+      "fields": {
+        "enabled": {
+          "name": "On/Off",
+          "description": "See name."
+        }
+      }
+    },
+    "set_bass_enhancer": {
+      "name": "Set Bass Mode",
+      "description": "Turn 'Bass Mode' on/off.",
+      "fields": {
+        "enabled": {
+          "name": "On/Off",
+          "description": "See name."
+        }
+      }
+    },
+    "set_voice_enhancer": {
+      "name": "Set Voice Enhancer",
+      "description": "Turn 'Voice Enhancer' on/off.",
+      "fields": {
+        "enabled": {
+          "name": "On/Off",
+          "description": "See name."
+        }
+      }
+    },
+    "set_speaker_level": {
+      "name": "Change Speaker Level",
+      "description": "Change the volume of individual speakers.",
+      "fields": {
+        "speaker_identifier": {
+          "name": "Speaker Identifier",
+          "description": "Identifier of the speaker."
+        },
+        "level": {
+          "name": "Level",
+          "description": "Level of the Speaker from -6 to 6."
+        }
+      }
+    },
+    "set_rear_speaker_mode": {
+      "name": "Set Rear Speaker Mode",
+      "description": "Use your rear speakers as 'Front' or 'Rear' speakers.",
+      "fields": {
+        "speaker_mode": {
+          "name": "Speaker mode",
+          "description": "Weather the speaker are used as rear / front speakers."
+        }
+      }
+    },
+    "set_active_voice_amplifier": {
+      "name": "Set Voice Amplifier",
+      "description": "Turn 'Voice Amplifier' on/off.",
+      "fields": {
+        "enabled": {
+          "name": "On/Off",
+          "description": "See name."
+        }
+      }
+    },
+    "set_space_fit_sound": {
+      "name": "Set SpaceFitSound",
+      "description": "Turn 'SpaceFitSound' on/off.",
+      "fields": {
+        "enabled": {
+          "name": "On/Off",
+          "description": "See name."
+        }
+      }
+    }
+  }
 }
