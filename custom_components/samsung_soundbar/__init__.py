@@ -34,22 +34,26 @@ async def _async_get_access_token(hass: HomeAssistant, entry: ConfigEntry) -> st
     return oauth_session.token[CONF_ACCESS_TOKEN]
 
 
+async def _async_get_authenticated_client(hass: HomeAssistant, entry: ConfigEntry) -> SmartThings:
+    token = await _async_get_access_token(hass, entry)
+    api = SmartThings(session=async_get_clientsession(hass))
+    api.authenticate(token)
+    return api
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up component from a config entry, config_entry contains data from config entry database."""
     _LOGGER.info("[%s] Starting to setup a ConfigEntry", DOMAIN)
     _LOGGER.debug("[%s] Setting up ConfigEntry with the following data: %s", DOMAIN, entry.data)
 
-    token = await _async_get_access_token(hass, entry)
+    api = await _async_get_authenticated_client(hass, entry)
 
     if DOMAIN not in hass.data:
         _LOGGER.debug("[%s] Domain not found in hass.data setting default", DOMAIN)
-        hass.data[DOMAIN] = SoundbarConfig(
-            SmartThings(async_get_clientsession(hass), token),
-            {},
-        )
+        hass.data[DOMAIN] = SoundbarConfig(api, {})
 
     domain_config: SoundbarConfig = hass.data[DOMAIN]
-    domain_config.api.token = token
+    domain_config.api = api
     _LOGGER.debug("[%s] Retrieved Domain Config: %s", DOMAIN, domain_config)
 
     options = {**DEFAULT_OPTIONS, **entry.options}
@@ -61,7 +65,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             DOMAIN,
             entry.data.get(CONF_ENTRY_DEVICE_ID),
         )
-        smart_things_device = await domain_config.api.device(entry.data.get(CONF_ENTRY_DEVICE_ID))
+        smart_things_device = await domain_config.api.get_device(entry.data.get(CONF_ENTRY_DEVICE_ID))
         session = async_get_clientsession(hass)
 
         soundbar_device = SoundbarDevice(

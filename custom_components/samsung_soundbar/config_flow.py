@@ -38,10 +38,16 @@ DEFAULT_OPTIONS = {
 }
 
 
+def _get_authenticated_client(hass, token: str) -> pysmartthings.SmartThings:
+    api = pysmartthings.SmartThings(session=async_get_clientsession(hass))
+    api.authenticate(token)
+    return api
+
+
 async def validate_input(api: pysmartthings.SmartThings, device_id: str):
     """Validate that the selected device exists and can be loaded."""
     try:
-        return await api.device(device_id)
+        return await api.get_device(device_id)
     except APIResponseError as exc:
         _LOGGER.error("[Samsung Soundbar] ERROR: %s", str(exc))
         raise ValueError from exc
@@ -75,12 +81,10 @@ class SamsungSoundbarFlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHand
 
         session = config_entry_oauth2_flow.OAuth2Session(self.hass, self.flow_impl, data)
         await session.async_ensure_token_valid()
-        api = pysmartthings.SmartThings(
-            async_get_clientsession(self.hass), session.token[CONF_ACCESS_TOKEN]
-        )
+        api = _get_authenticated_client(self.hass, session.token[CONF_ACCESS_TOKEN])
 
         try:
-            devices = await api.devices()
+            devices = await api.get_devices()
         except Exception as exc:  # pragma: no cover - defensive for runtime API errors
             _LOGGER.error("Unable to fetch SmartThings devices during setup: %s", exc)
             return self.async_abort(reason="fetch_failed")
@@ -111,9 +115,7 @@ class SamsungSoundbarFlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHand
                 self.hass, self.flow_impl, self._oauth_data
             )
             await session.async_ensure_token_valid()
-            api = pysmartthings.SmartThings(
-                async_get_clientsession(self.hass), session.token[CONF_ACCESS_TOKEN]
-            )
+            api = _get_authenticated_client(self.hass, session.token[CONF_ACCESS_TOKEN])
 
             try:
                 await validate_input(api, user_input[CONF_ENTRY_DEVICE_ID])
