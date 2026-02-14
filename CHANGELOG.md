@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.5.0] Compatibility + Config Flow + OCF Improvements
+
+### Fixed
+
+- Added Home Assistant compatibility fallback for `DEVICE_CLASS_SPEAKER` to prevent import errors on newer HA versions
+- Fixed config flow handler issues and improved setup stability for modern Home Assistant builds
+- Improved woofer state update and mute handling logic
+
+### Added
+
+- Added raw execute / OCF service calls for advanced Samsung capability control
+- Added coordinator-based updates and additional SamsungVD entity exposure
+- Added `services.yaml` documentation entries for newly exposed services
+
+### Changed
+
+- Replaced `pysmartthings` dependency path with direct SmartThings REST client handling
+- Improved OCF soundbar compatibility (including better behavior for newer Q-series models)
+- Reduced polling pressure and improved handling for empty execute status payloads
+- Config flow now defaults advanced toggles to off and redacts token values in errors/logs
+
 ## [0.4.1] Media Mystique: The Great Data Disappearing Act!
 
 ### Fixed
