@@ -1,28 +1,20 @@
 {
-    "config":{
-        "step":{
-            "user":{
+    "config": {
+        "step": {
+            "user": {
+                "description": "Verbinde dein SmartThings-Konto, um fortzufahren.",
+                "title": "Konto verbinden"
+            },
+            "device": {
                 "data": {
-                    "api_key": "SmartThings API Token",
-                    "device_id": "Device ID",
-                    "device_name":"Device Name",
-                    "device_volume": "Max Volume (int)"
-                  },
-                  "description": "Bitte gib deine Daten ein.",
-                  "title": "Authentifizierung"
-            },
-            "device":{
-                "data" : {
-                    "settings_advanced_audio": "'Advanced Audio switches' aktivieren (NightMode, BassMode, VoiceEnhancer)",
-                    "settings_eq": "'EQ selector' aktivieren",
-                    "settings_soundmode": "'Soundmode selector' aktivieren",
-                    "settings_woofer": "'Subwoofer Entität' aktivieren"
+                    "device_id": "Gerät",
+                    "device_name": "Gerätename"
                 },
-                "description": "Einige Soundbars haben verschiedene Featuresets. Wähle bitte aus welche Features von deiner Soundbar supported werden (einsehbar in der SmartThings App).",
-                "title": "Geräte Einstellungen"
+                "description": "Wähle die SmartThings-Soundbar aus, die du steuern möchtest.",
+                "title": "Gerät auswählen"
             },
-            "reconfigure_confirm":{
-                "data" : {
+            "reconfigure_confirm": {
+                "data": {
                     "settings_advanced_audio": "'Advanced Audio switches' aktivieren (NightMode, BassMode, VoiceEnhancer)",
                     "settings_eq": "'EQ selector' aktivieren",
                     "settings_soundmode": "'Soundmode selector' aktivieren",
@@ -31,7 +23,15 @@
                 },
                 "description": "Einige Soundbars haben verschiedene Featuresets. Wähle bitte aus welche Features von deiner Soundbar supported werden (einsehbar in der SmartThings App).",
                 "title": "Geräte Einstellungen"
+            },
+            "reauth_confirm": {
+                "description": "Verbinde dein SmartThings-Konto erneut, um abgelaufene Zugangsdaten zu aktualisieren.",
+                "title": "Konto erneut verbinden"
             }
+        },
+        "abort": {
+            "fetch_failed": "Verbindung zu SmartThings fehlgeschlagen. Bitte versuche es erneut.",
+            "no_devices": "Für dieses Konto wurden keine SmartThings-Geräte gefunden."
         }
     },
     "selector": {
@@ -59,56 +59,56 @@
                 "Front": "Front"
             }
         }
-  },
-  "services":{
-    "select_soundmode":{
-        "name": "SoundMode auswählen",
-        "description": "Wähle hier zwischen, 'Standard', 'Surround', 'Game' und 'Adaptive Sound'."
     },
-    "set_woofer_level":{
-        "name": "Subwoofer Level setzen",
-        "description": "Verändere die Lautstärke deines Subwoofers.",
-        "fields":{
-            "level":{
-                "name": "Volume Level",
-                "description": "Subwoofer Level, von -12 bis +6"
+    "services": {
+        "select_soundmode": {
+            "name": "SoundMode auswählen",
+            "description": "Wähle hier zwischen, 'Standard', 'Surround', 'Game' und 'Adaptive Sound'."
+        },
+        "set_woofer_level": {
+            "name": "Subwoofer Level setzen",
+            "description": "Verändere die Lautstärke deines Subwoofers.",
+            "fields": {
+                "level": {
+                    "name": "Volume Level",
+                    "description": "Subwoofer Level, von -12 bis +6"
+                }
             }
-        }
-    },
-    "set_night_mode":{
-        "name": "Nachtmodus setzen",
-        "description": "Schalte den 'Nachtmodus' an / aus.",
-        "fields":{
-            "enabled":{
-                "name": "An / ausschalten",
-                "description": "Siehe Name."
+        },
+        "set_night_mode": {
+            "name": "Nachtmodus setzen",
+            "description": "Schalte den 'Nachtmodus' an / aus.",
+            "fields": {
+                "enabled": {
+                    "name": "An / ausschalten",
+                    "description": "Siehe Name."
+                }
             }
-        }
-    },
-    "set_bass_enhancer":{
-        "name": "Bassmodus setzen",
-        "description": "Schalte den 'Bassmodus' an / aus.",
-        "fields":{
-            "enabled":{
-                "name": "An / ausschalten",
-                "description": "Siehe Name."
+        },
+        "set_bass_enhancer": {
+            "name": "Bassmodus setzen",
+            "description": "Schalte den 'Bassmodus' an / aus.",
+            "fields": {
+                "enabled": {
+                    "name": "An / ausschalten",
+                    "description": "Siehe Name."
+                }
             }
-        }
-    },
-    "set_voice_enhancer":{
-        "name": "Stimmenverbesserer setzen",
-        "description": "Schalte den 'Stimmenverbesserer' an / aus.",
-        "fields":{
-            "enabled":{
-                "name": "An / ausschalten",
-                "description": "Siehe Name."
+        },
+        "set_voice_enhancer": {
+            "name": "Stimmenverbesserer setzen",
+            "description": "Schalte den 'Stimmenverbesserer' an / aus.",
+            "fields": {
+                "enabled": {
+                    "name": "An / ausschalten",
+                    "description": "Siehe Name."
+                }
             }
-        }
-    },
-    "set_speaker_level":{
-        "name": "Lautsprecher level verändern",
-        "description": "Verändere die Lautstärke der einzelnen Lautsprecher",
-        "fields":{
+        },
+        "set_speaker_level": {
+            "name": "Lautsprecher level verändern",
+            "description": "Verändere die Lautstärke der einzelnen Lautsprecher",
+            "fields": {
                 "speaker_identifier": {
                     "name": "Lautsprecher",
                     "description": "Auszuwählender Lautsprecher"
@@ -118,36 +118,51 @@
                     "description": "Lautstärke Level zwischen -6 und 6."
                 }
             }
-    },
-    "set_rear_speaker_mode":{
-        "name": "Modus der hinteren Lautsprecher setzen",
-        "description": "Nutze deine Rücklautsprecher, als 'Vorder-' oder 'Rücklautsprecher'.",
-        "fields":{
+        },
+        "set_rear_speaker_mode": {
+            "name": "Modus der hinteren Lautsprecher setzen",
+            "description": "Nutze deine Rücklautsprecher, als 'Vorder-' oder 'Rücklautsprecher'.",
+            "fields": {
                 "speaker_mode": {
                     "name": "Lautsprecher Modus",
                     "description": "Nutze den Lautsprecher als Front oder Rear Speaker."
                 }
             }
-    },
-    "set_active_voice_amplifier":{
-        "name": "Stimmenverstärker setzen",
-        "description": "Schalte den 'Stimmenverstärker' an / aus.",
-        "fields":{
-            "enabled":{
-                "name": "An / ausschalten",
-                "description": "Siehe Name."
+        },
+        "set_active_voice_amplifier": {
+            "name": "Stimmenverstärker setzen",
+            "description": "Schalte den 'Stimmenverstärker' an / aus.",
+            "fields": {
+                "enabled": {
+                    "name": "An / ausschalten",
+                    "description": "Siehe Name."
+                }
+            }
+        },
+        "set_space_fit_sound": {
+            "name": "SpaceFitSound setzen",
+            "description": "Schalte den 'SpaceFitSound' an / aus.",
+            "fields": {
+                "enabled": {
+                    "name": "An / ausschalten",
+                    "description": "Siehe Name."
+                }
             }
         }
     },
-    "set_space_fit_sound":{
-        "name": "SpaceFitSound setzen",
-        "description": "Schalte den 'SpaceFitSound' an / aus.",
-        "fields":{
-            "enabled":{
-                "name": "An / ausschalten",
-                "description": "Siehe Name."
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "settings_advanced_audio": "'Advanced Audio switches' aktivieren (NightMode, BassMode, VoiceEnhancer)",
+                    "settings_eq": "'EQ selector' aktivieren",
+                    "settings_soundmode": "'Soundmode selector' aktivieren",
+                    "settings_woofer": "'Subwoofer Entität' aktivieren",
+                    "device_volume": "Max Volume (int)"
+                },
+                "description": "Einige Soundbars haben verschiedene Featuresets. Wähle bitte aus welche Features von deiner Soundbar supported werden (einsehbar in der SmartThings App).",
+                "title": "Geräte Einstellungen"
             }
         }
     }
-  }
 }

@@ -22,7 +22,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         device_config: DeviceConfig = domain_data.devices[key]
         device = device_config.device
         if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            if config_entry.data.get(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES):
+            if config_entry.options.get(CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES, False):
                 entities.append(
                     SoundbarSwitchAdvancedAudio(
                         device,

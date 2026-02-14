@@ -23,7 +23,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         device = device_config.device
         if device.device_id == config_entry.data.get(
             CONF_ENTRY_DEVICE_ID
-        ) and config_entry.data.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER):
+        ) and config_entry.options.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER, False):
             entities.append(
                 SoundbarWooferNumberEntity(
                     device,

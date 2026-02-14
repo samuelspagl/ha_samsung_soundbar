@@ -14,10 +14,7 @@ import voluptuous as vol
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .api_extension.const import SpeakerIdentifier, RearSpeakerMode
 from .const import (
-    CONF_ENTRY_API_KEY,
     CONF_ENTRY_DEVICE_ID,
-    CONF_ENTRY_DEVICE_NAME,
-    CONF_ENTRY_MAX_VOLUME,
     DOMAIN,
 )
 from .models import DeviceConfig

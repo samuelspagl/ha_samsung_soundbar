@@ -27,11 +27,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         device_config: DeviceConfig = domain_data.devices[key]
         device = device_config.device
         if device.device_id == config_entry.data.get(CONF_ENTRY_DEVICE_ID):
-            if config_entry.data.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR):
+            if config_entry.options.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR, False):
                 entities.append(
                     EqPresetSelectEntity(device, "eq_preset", "mdi:tune-vertical")
                 )
-            if config_entry.data.get(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR):
+            if config_entry.options.get(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR, False):
                 entities.append(
                     SoundModeSelectEntity(
                         device, "sound_mode_preset", "mdi:surround-sound"
