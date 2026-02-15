@@ -1,45 +1,46 @@
-import logging
+"""Number platform for Samsung Soundbar."""
+
+from __future__ import annotations
 
 from homeassistant.components.number import (
     NumberEntity,
     NumberEntityDescription,
     NumberMode,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity import DeviceInfo
 
 from .api_extension.SoundbarDevice import SoundbarDevice
-from .const import CONF_ENTRY_DEVICE_ID, CONF_ENTRY_SETTINGS_WOOFER_NUMBER, DOMAIN
-from .models import DeviceConfig
-
-_LOGGER = logging.getLogger(__name__)
+from .const import CONF_ENTRY_SETTINGS_WOOFER_NUMBER, DOMAIN
+from .models import SoundbarRuntimeData
 
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    domain_data = hass.data[DOMAIN]
+async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities) -> bool:
+    """Set up number entities from a config entry."""
+    if not config_entry.data.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER):
+        return True
 
-    entities = []
-    for key in domain_data.devices:
-        device_config: DeviceConfig = domain_data.devices[key]
-        device = device_config.device
-        if device.device_id == config_entry.data.get(
-            CONF_ENTRY_DEVICE_ID
-        ) and config_entry.data.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER):
-            entities.append(
-                SoundbarWooferNumberEntity(
-                    device,
-                    "woofer_level",
-                )
+    runtime_data: SoundbarRuntimeData = config_entry.runtime_data
+    async_add_entities(
+        [
+            SoundbarWooferNumberEntity(
+                runtime_data.device,
+                "woofer_level",
             )
-    async_add_entities(entities)
+        ]
+    )
     return True
 
 
 class SoundbarWooferNumberEntity(NumberEntity):
+    """Woofer level entity."""
+
     def __init__(
         self,
         device: SoundbarDevice,
         append_unique_id: str,
-    ):
+    ) -> None:
+        """Initialize number entity."""
         self.entity_id = f"number.{device.device_name}_{append_unique_id}"
         self.entity_description = NumberEntityDescription(
             native_max_value=6,
@@ -60,13 +61,9 @@ class SoundbarWooferNumberEntity(NumberEntity):
         )
         self.__append_unique_id = append_unique_id
 
-    # ---------- GENERAL ---------------
-
     @property
     def name(self):
         return self.__append_unique_id
-
-    # ------ STATE FUNCTIONS --------
 
     @property
     def native_value(self) -> float | None:
