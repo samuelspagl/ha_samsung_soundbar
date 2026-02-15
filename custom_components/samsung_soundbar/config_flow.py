@@ -10,12 +10,21 @@ import pysmartthings
 import voluptuous as vol
 from voluptuous import All, Range
 
+from homeassistant.components.application_credentials import (
+    ClientCredential,
+    async_import_client_credential,
+)
 from homeassistant.config_entries import (
     SOURCE_REAUTH,
     ConfigEntry,
     ConfigFlowResult,
 )
-from homeassistant.const import CONF_ACCESS_TOKEN, CONF_TOKEN
+from homeassistant.const import (
+    CONF_ACCESS_TOKEN,
+    CONF_CLIENT_ID,
+    CONF_CLIENT_SECRET,
+    CONF_TOKEN,
+)
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
@@ -37,6 +46,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 SMARTTHINGS_SCOPES = ["r:devices:*", "x:devices:*"]
+SMARTTHINGS_DOMAIN = "smartthings"
 SmartThings = pysmartthings.SmartThings
 
 
@@ -101,6 +111,52 @@ class SamsungSoundbarFlowHandler(
         """Validate a SmartThings device with a bearer token."""
         api = _create_api_client(async_get_clientsession(self.hass), token)
         return await _fetch_device(api, device_id)
+
+    async def _async_has_smartthings_implementation(self) -> bool:
+        """Check if smartthings OAuth implementation is available."""
+        implementations = await config_entry_oauth2_flow.async_get_implementations(
+            self.hass, DOMAIN
+        )
+        return SMARTTHINGS_DOMAIN in implementations
+
+    async def _async_import_smartthings_credentials(self) -> str:
+        """Import reusable credentials from official SmartThings entries.
+
+        Returns one of: imported, missing, import_failed.
+        """
+        smartthings_entries = self.hass.config_entries.async_entries(SMARTTHINGS_DOMAIN)
+        for entry in smartthings_entries:
+            client_id = entry.data.get(CONF_CLIENT_ID)
+            client_secret = entry.data.get(CONF_CLIENT_SECRET)
+            if not isinstance(client_id, str) or not client_id:
+                continue
+            if not isinstance(client_secret, str) or not client_secret:
+                continue
+
+            try:
+                await async_import_client_credential(
+                    self.hass,
+                    DOMAIN,
+                    ClientCredential(
+                        client_id=client_id,
+                        client_secret=client_secret,
+                        name="Imported from SmartThings",
+                    ),
+                    auth_domain=SMARTTHINGS_DOMAIN,
+                )
+            except Exception:  # noqa: BLE001
+                _LOGGER.warning(
+                    "Failed to import SmartThings OAuth credentials for %s",
+                    DOMAIN,
+                    exc_info=True,
+                )
+                return "import_failed"
+
+            _LOGGER.debug("Imported SmartThings OAuth credentials for %s", DOMAIN)
+            return "imported"
+
+        _LOGGER.debug("No reusable SmartThings OAuth credentials found")
+        return "missing"
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -171,7 +227,21 @@ class SamsungSoundbarFlowHandler(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Start OAuth setup."""
-        return await self.async_step_pick_implementation(user_input)
+        if await self._async_has_smartthings_implementation():
+            return await self.async_step_pick_implementation(
+                user_input={"implementation": SMARTTHINGS_DOMAIN}
+            )
+
+        import_result = await self._async_import_smartthings_credentials()
+        if import_result == "import_failed":
+            return self.async_abort(reason="smartthings_oauth_import_failed")
+
+        if await self._async_has_smartthings_implementation():
+            return await self.async_step_pick_implementation(
+                user_input={"implementation": SMARTTHINGS_DOMAIN}
+            )
+
+        return self.async_abort(reason="missing_smartthings_oauth_credentials")
 
     async def async_oauth_create_entry(self, data: dict[str, Any]) -> ConfigFlowResult:
         """Create an entry after OAuth flow."""
@@ -367,7 +437,7 @@ class SamsungSoundbarFlowHandler(
         """Migrate PAT entry to OAuth through reconfigure."""
         if self._reconfigure_entry is None:
             return self.async_abort(reason="entry_not_found")
-        return await self.async_step_pick_implementation(user_input)
+        return await self.async_step_oauth(user_input)
 
     async def async_step_reauth(
         self, entry_data: Mapping[str, Any]

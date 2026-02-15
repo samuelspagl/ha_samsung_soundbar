@@ -71,7 +71,9 @@
     "abort": {
       "entry_not_found": "Der Konfigurationseintrag konnte nicht gefunden werden.",
       "oauth_token_invalid": "OAuth-Token fehlt oder ist ungültig.",
-      "missing_auth_implementation": "Für diesen Eintrag ist keine OAuth-Implementierung hinterlegt."
+      "missing_auth_implementation": "Für diesen Eintrag ist keine OAuth-Implementierung hinterlegt.",
+      "missing_smartthings_oauth_credentials": "Es wurden keine wiederverwendbaren SmartThings-OAuth-Zugangsdaten gefunden. Richte zuerst die offizielle SmartThings-Integration ein oder nutze die API-Token-Einrichtung.",
+      "smartthings_oauth_import_failed": "SmartThings-OAuth-Zugangsdaten konnten nicht importiert werden. Richte zuerst die offizielle SmartThings-Integration ein oder nutze die API-Token-Einrichtung."
     }
   },
   "selector": {
