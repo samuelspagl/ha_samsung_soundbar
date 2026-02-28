@@ -1,15 +1,19 @@
 import logging
 from typing import Any, Mapping
 
-from homeassistant.components.media_player import (
-    DEVICE_CLASS_SPEAKER,
-    MediaPlayerEntity,
-)
+from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.components.media_player.const import MediaPlayerEntityFeature
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
 from homeassistant.helpers import config_validation as cv, entity_platform, selector
 import voluptuous as vol
+
+# Modification: Added try/except to handle fallback for MediaPlayerDeviceClass
+try:
+    from homeassistant.components.media_player.const import MediaPlayerDeviceClass
+    HAS_MEDIAPLAYERDEVICECLASS = True
+except ImportError:
+    HAS_MEDIAPLAYERDEVICECLASS = False
 
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .api_extension.const import SpeakerIdentifier, RearSpeakerMode
@@ -105,8 +109,6 @@ def addServices():
     )
 
 
-
-
 async def async_setup_entry(hass, config_entry, async_add_entities):
     domain_data = hass.data[DOMAIN]
 
@@ -148,7 +150,12 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     @property
     def device_class(self):
-        return DEVICE_CLASS_SPEAKER
+        # Modification: Added fallback to DEVICE_CLASS_SPEAKER for backward compatibility
+        return (
+            MediaPlayerDeviceClass.SPEAKER
+            if HAS_MEDIAPLAYERDEVICECLASS
+            else "speaker"
+        )
 
     @property
     def supported_features(self):
@@ -171,6 +178,7 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
         await self.device.switch_on()
 
     # ---------- VOLUME ------------
+
     @property
     def volume_level(self):
         return self.device.volume_level
@@ -218,6 +226,7 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
         await self.device.select_sound_mode(sound_mode)
 
     # ---------- MEDIA ------------
+
     @property
     def media_title(self):
         return self.device.media_title
@@ -257,7 +266,7 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
     async def async_media_stop(self):
         await self.device.media_stop()
 
-    # ---------- SERVICE_UTILITY ------------
+    # ---------- SERVICE UTILITY ------------
 
     async def async_set_woofer_level(self, level: int):
         await self.device.set_woofer(level)
@@ -270,8 +279,6 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
 
     async def async_set_night_mode(self, enabled: bool):
         await self.device.set_night_mode(enabled)
-
-    # ---------- SERVICE_UTILITY ------------
 
     async def async_set_speaker_level(self, speaker_identifier: str, level: int):
         await self.device.set_speaker_level(
