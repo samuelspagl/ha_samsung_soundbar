@@ -1,12 +1,19 @@
 {
   "domain": "samsung_soundbar",
   "name": "Samsung Soundbar",
-  "codeowners": ["@samuelspagl"],
+  "codeowners": [
+    "@samuelspagl"
+  ],
   "config_flow": true,
   "documentation": "https://www.example.com",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/samuelspagl/ha_samsung_soundbar/issues",
-  "requirements": ["pysmartthings"],
-  "version": "0.4.0"
+  "requirements": [
+    "pysmartthings==3.5.2"
+  ],
+  "version": "0.6.0",
+  "dependencies": [
+    "application_credentials"
+  ]
 }

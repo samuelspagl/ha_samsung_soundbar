@@ -1,13 +1,15 @@
 import logging
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import DOMAIN, HomeAssistant
+from homeassistant.const import CONF_ACCESS_TOKEN
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from pysmartthings import SmartThings
+from pysmartthings.exceptions import SmartThingsAuthenticationFailedError
 
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .const import (
-    CONF_ENTRY_API_KEY,
     CONF_ENTRY_DEVICE_ID,
     CONF_ENTRY_DEVICE_NAME,
     CONF_ENTRY_MAX_VOLUME,
@@ -16,7 +18,6 @@ from .const import (
     CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR,
     CONF_ENTRY_SETTINGS_WOOFER_NUMBER,
     DOMAIN,
-    SUPPORTED_DOMAINS,
 )
 from .models import DeviceConfig, SoundbarConfig
 
@@ -26,63 +27,100 @@ PLATFORMS = ["media_player", "switch", "image", "number", "select", "sensor"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up component from a config entry, config_entry contains data from config entry database."""
-    # store shell object
+    """Set up Samsung Soundbar from config entry."""
 
-    _LOGGER.info(f"[{DOMAIN}] Starting to setup a ConfigEntry")
-    _LOGGER.debug(
-        f"[{DOMAIN}] Setting up ConfigEntry with the following data: {entry.data}"
-    )
-    if not DOMAIN in hass.data:
-        _LOGGER.debug(f"[{DOMAIN}] Domain not found in hass.data setting default")
-        hass.data[DOMAIN] = SoundbarConfig(
-            SmartThings(
-                async_get_clientsession(hass), entry.data.get(CONF_ENTRY_API_KEY)
-            ),
-            {},
-        )
+    _LOGGER.info("[%s] Setting up entry", DOMAIN)
+
+    token = entry.data[CONF_ACCESS_TOKEN]
+
+    api = SmartThings(session=async_get_clientsession(hass))
+    api.authenticate(token)
+
+    if DOMAIN not in hass.data:
+        hass.data[DOMAIN] = SoundbarConfig(api, {})
 
     domain_config: SoundbarConfig = hass.data[DOMAIN]
-    _LOGGER.debug(f"[{DOMAIN}] Retrieved Domain Config: {domain_config}")
+    domain_config.api = api
 
-    if not entry.data.get(CONF_ENTRY_DEVICE_ID) in domain_config.devices:
-        _LOGGER.info(f"[{DOMAIN}] Setting up new Soundbar device")
-        _LOGGER.debug(
-            f"[{DOMAIN}] DeviceId: {entry.data.get(CONF_ENTRY_DEVICE_ID)} not found in domain_config, setting up new device."
-        )
-        smart_things_device = await domain_config.api.device(
-            entry.data.get(CONF_ENTRY_DEVICE_ID)
-        )
+    device_id = entry.data.get(CONF_ENTRY_DEVICE_ID)
+
+    if device_id not in domain_config.devices:
+
+        try:
+            _LOGGER.debug(
+                "[%s] Validating SmartThings authentication for device %s",
+                DOMAIN,
+                device_id,
+            )
+
+            smart_things_device = await api.get_device(device_id)
+
+        except SmartThingsAuthenticationFailedError as err:
+            _LOGGER.error(
+                "[%s] SmartThings authentication failed. "
+                "The token may have expired, been revoked, or is no longer valid.",
+                DOMAIN,
+            )
+
+            raise ConfigEntryAuthFailed(
+                "SmartThings token is no longer valid"
+            ) from err
+
+        except Exception as err:
+            _LOGGER.exception(
+                "[%s] Unexpected error while loading device %s",
+                DOMAIN,
+                device_id,
+            )
+            raise
+
         session = async_get_clientsession(hass)
+
         soundbar_device = SoundbarDevice(
-            smart_things_device,
-            session,
-            entry.data.get(CONF_ENTRY_MAX_VOLUME),
-            entry.data.get(CONF_ENTRY_DEVICE_NAME),
-            enable_eq=entry.data.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR),
-            enable_advanced_audio=entry.data.get(
-                CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES
+            device=smart_things_device,
+            smartthings=api,
+            session=session,
+            max_volume=entry.options.get(CONF_ENTRY_MAX_VOLUME, 100),
+            device_name=entry.data.get(CONF_ENTRY_DEVICE_NAME),
+            enable_eq=entry.options.get(CONF_ENTRY_SETTINGS_EQ_SELECTOR, False),
+            enable_advanced_audio=entry.options.get(
+                CONF_ENTRY_SETTINGS_ADVANCED_AUDIO_SWITCHES, False
             ),
-            enable_soundmode=entry.data.get(CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR),
-            enable_woofer=entry.data.get(CONF_ENTRY_SETTINGS_WOOFER_NUMBER),
+            enable_soundmode=entry.options.get(
+                CONF_ENTRY_SETTINGS_SOUNDMODE_SELECTOR, False
+            ),
+            enable_woofer=entry.options.get(
+                CONF_ENTRY_SETTINGS_WOOFER_NUMBER, False
+            ),
         )
+
         await soundbar_device.update()
-        domain_config.devices[entry.data.get(CONF_ENTRY_DEVICE_ID)] = DeviceConfig(
-            entry.data, soundbar_device
+
+        domain_config.devices[device_id] = DeviceConfig(
+            entry.data,
+            soundbar_device,
         )
-        _LOGGER.info(f"[{DOMAIN}] Successfully initialized new Soundbar device")
+
+        _LOGGER.info("[%s] Device initialized successfully", DOMAIN)
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    domain_data = hass.data[DOMAIN]
+
     if unload_ok:
-        del domain_data.devices[entry.data.get(CONF_ENTRY_DEVICE_ID)]
-        if len(domain_data.devices) == 0:
-            del hass.data[DOMAIN]
+        domain_data = hass.data.get(DOMAIN)
+        if domain_data:
+            domain_data.devices.pop(entry.data.get(CONF_ENTRY_DEVICE_ID), None)
+            if not domain_data.devices:
+                hass.data.pop(DOMAIN, None)
 
     return unload_ok
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    await hass.config_entries.async_reload(entry.entry_id)

@@ -1,10 +1,7 @@
 import logging
 from typing import Any, Mapping
 
-from homeassistant.components.media_player import (
-    DEVICE_CLASS_SPEAKER,
-    MediaPlayerEntity,
-)
+from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.components.media_player.const import MediaPlayerEntityFeature
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity import DeviceInfo, generate_entity_id
@@ -14,10 +11,7 @@ import voluptuous as vol
 from .api_extension.SoundbarDevice import SoundbarDevice
 from .api_extension.const import SpeakerIdentifier, RearSpeakerMode
 from .const import (
-    CONF_ENTRY_API_KEY,
     CONF_ENTRY_DEVICE_ID,
-    CONF_ENTRY_DEVICE_NAME,
-    CONF_ENTRY_MAX_VOLUME,
     DOMAIN,
 )
 from .models import DeviceConfig
@@ -145,10 +139,6 @@ class SmartThingsSoundbarMediaPlayer(MediaPlayerEntity):
         await self.device.update()
 
     # ---------- GENERAL SETTINGS ------------
-
-    @property
-    def device_class(self):
-        return DEVICE_CLASS_SPEAKER
 
     @property
     def supported_features(self):
